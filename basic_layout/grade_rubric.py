@@ -11,6 +11,14 @@ from the agentic-dx-improvement harness into promptfoo. It:
   4. Parses verify-result.json, sums the per-section scores, and returns a
      normalized score (handles the 21- vs 24-point total automatically).
 
+CONCURRENCY: graders for the two solver rows can run at the same time, so each
+run is isolated:
+  - server port: the per-run port written by solve.sh ($WORKSPACE/.run-port) is
+    set as PORT for the verifier and injected into the verify prompt, so the
+    grader's app and the solver's app never share 8080;
+  - Claude config + Playwright MCP: a per-workspace home via claude-home.sh.
+After grading, the verifier's process group is reaped and the port freed.
+
 Per ADR 0002, the rubric is a FLOOR, not the optimization target: pass = score
 clears RUBRIC_PASS_THRESHOLD. The full trace + agent-time-breakdown.json the
 verifier produces are preserved in the workspace as the real DX signal.
@@ -21,23 +29,62 @@ Env:
   PROBLEM               problem name (default: basic_layout)
   RUBRIC_PASS_THRESHOLD floor as a 0..1 fraction of max (default: 0.6)
   VERIFIER_CMD          optional shell command to run the verifier instead of the
-                        default `claude ...`; runs with cwd=workspace. Use this to
-                        swap in a different grader (e.g. Docker verify_task.sh).
-  CLAUDE_CONFIG_DIR     isolated Claude home with Playwright MCP + Vaadin plugin
-                        (default: $AGENTIC_DX_DIR/.bench-claude-home)
+                        default `claude ...`; runs with cwd=workspace and PORT set.
 """
 
 import json
 import os
 import shutil
+import signal
 import subprocess
 
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # promptfoo
+_HERE = os.path.dirname(os.path.abspath(__file__))                # promptfoo/basic_layout
+_REPO_ROOT = os.path.dirname(_HERE)                               # promptfoo
 _AGENTIC_DX_DIR = os.environ.get(
     "AGENTIC_DX_DIR", os.path.join(_REPO_ROOT, "..", "agentic-dx-improvement")
 )
 _PROBLEM = os.environ.get("PROBLEM", "basic_layout")
 _PASS_THRESHOLD = float(os.environ.get("RUBRIC_PASS_THRESHOLD", "0.6"))
+
+
+def _run_port(workspace):
+    try:
+        with open(os.path.join(workspace, ".run-port")) as f:
+            return int(f.read().strip())
+    except Exception:
+        return 8080
+
+
+def _claude_home(workspace):
+    """Isolated CLAUDE_CONFIG_DIR for this workspace (also isolates the MCP browser)."""
+    try:
+        out = subprocess.run(
+            ["bash", os.path.join(_HERE, "claude-home.sh"), workspace],
+            capture_output=True, text=True, check=True,
+            env=dict(os.environ, AGENTIC_DX_DIR=_AGENTIC_DX_DIR),
+        )
+        path = (out.stdout or "").strip().splitlines()
+        if path and os.path.isdir(path[-1]):
+            return path[-1]
+    except Exception:
+        pass
+    # Fallback: the shared bench home (fine when runs are serialized).
+    return os.environ.get(
+        "CLAUDE_CONFIG_DIR", os.path.join(_AGENTIC_DX_DIR, ".bench-claude-home")
+    )
+
+
+def _free_port(port):
+    try:
+        out = subprocess.run(["lsof", "-ti", "tcp:%d" % port],
+                             capture_output=True, text=True)
+        for pid in out.stdout.split():
+            try:
+                os.kill(int(pid), signal.SIGTERM)
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 def _run_verifier(workspace):
@@ -61,10 +108,21 @@ def _run_verifier(workspace):
     with open(verify_prompt_file, encoding="utf-8") as f:
         verify_prompt = f.read()
 
+    # The verify prompt hardcodes port 8080; override it with this run's port so
+    # concurrent graders don't collide (and the right app is inspected).
+    port = _run_port(workspace)
+    if port != 8080:
+        verify_prompt += (
+            "\n\n--- PORT OVERRIDE (authoritative) ---\n"
+            "This app runs on port {p}, NOT 8080. The PORT environment variable is "
+            "already set to {p} and app/run.sh honours it. Wait for the application "
+            "to start on port {p} and use http://localhost:{p} throughout; ignore "
+            "any mention of port 8080 above.".format(p=port)
+        )
+
     env = dict(os.environ)
-    env.setdefault(
-        "CLAUDE_CONFIG_DIR", os.path.join(_AGENTIC_DX_DIR, ".bench-claude-home")
-    )
+    env["PORT"] = str(port)
+    env["CLAUDE_CONFIG_DIR"] = _claude_home(workspace)
 
     verifier_cmd = os.environ.get("VERIFIER_CMD")
     if verifier_cmd:
@@ -76,7 +134,17 @@ def _run_verifier(workspace):
             "--output-format", "stream-json", "--verbose",
             "-p", verify_prompt,
         ]
-    subprocess.run(cmd, cwd=workspace, env=env, check=False)
+
+    # Own session/group so we can reap a lingering app server afterwards.
+    proc = subprocess.Popen(cmd, cwd=workspace, env=env, start_new_session=True)
+    try:
+        proc.wait()
+    finally:
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except Exception:
+            pass
+        _free_port(port)
     return result_path
 
 

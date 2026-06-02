@@ -13,6 +13,13 @@
 # IS the promptfoo "output" the graders parse, so ALL agent chatter goes to
 # stderr / a log file to keep stdout clean JSON.
 #
+# CONCURRENCY: two solvers can run at once (`--max-concurrency 2`). Per-run state
+# is isolated so nothing collides — see the "isolation" notes below:
+#   - server port: a free port per run, via the PORT env (application.properties
+#     does `server.port=${PORT:8080}`), used by the solver AND the grader;
+#   - Claude config + Playwright MCP profile: a per-workspace home (claude-home.sh);
+#   - workspace dirs: unique per run (agent + timestamp + pid).
+#
 # No `set -u`: macOS bash 3.2 errors on empty-array expansion under it.
 set -o pipefail
 
@@ -46,16 +53,32 @@ mkdir -p "$WORKSPACE"
 cp -a "$PROBLEM_DIR/." "$WORKSPACE/"      # task.md + reference PNGs (+ rubric.md)
 cp -a "$SKELETON_DIR" "$WORKSPACE/app"    # the project the agent edits in place
 rm -f "$WORKSPACE/rubric.md"              # the agent must NOT see the grading rubric
-printf '%s\n' "$PROMPT" > "$WORKSPACE/prompt.txt"
+printf '%s\n' "$PROMPT" > "$WORKSPACE/prompt.txt"   # the task prompt (no run-env noise)
 
-echo "Solver: $SOLVER_AGENT   Workspace: $WORKSPACE" >&2
+# --- Per-run server port (so concurrent runs don't collide on 8080) --------
+# application.properties has `server.port=${PORT:8080}`, and Spring resolves the
+# PORT env var, so exporting it moves the whole app (dev.sh / run.sh) off 8080.
+RUN_PORT="$(python3 -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')"
+printf '%s\n' "$RUN_PORT" > "$WORKSPACE/.run-port"
+export PORT="$RUN_PORT"
+echo "Solver: $SOLVER_AGENT   Port: $RUN_PORT   Workspace: $WORKSPACE" >&2
 
-# --- Shared cleanup: reap the agent's process group + free port 8080 -------
+# Operational note appended to the SOLVER prompt only (prompt.txt stays the task).
+# Both agents get the same note, so the comparison stays fair.
+SOLVE_PROMPT="$(cat <<EOF
+$PROMPT
+
+--- Run environment (not part of the task) ---
+This run has a dedicated server port. The PORT environment variable is set to $RUN_PORT and application.properties honours it (server.port=\${PORT:8080}), so the app starts on port $RUN_PORT. Use http://localhost:$RUN_PORT when previewing in a browser; do not hardcode port 8080.
+EOF
+)"
+
+# --- Shared cleanup: reap the agent's process group + free this run's port -
 # The solver may background a dev server (dev.sh / mvn spring-boot:run) to preview
-# its work with Playwright. If that outlives the agent it keeps port 8080 bound and
-# the grader's run.sh can't start. So run the agent as its own process-group leader
-# and reap the whole group on exit; free port 8080 as a backstop. Mirrors the
-# watchdog in run_task_local.sh. Cleanup runs at solver exit, before grading begins.
+# its work. If that outlives the agent it keeps RUN_PORT bound and the grader's
+# run.sh can't start. Run the agent as its own process-group leader and reap the
+# whole group on exit; free RUN_PORT (this run's port only) as a backstop. Mirrors
+# the watchdog in run_task_local.sh. Runs at solver exit, before grading begins.
 AGENT_PGID=""
 cleanup() {
     if [ -n "$AGENT_PGID" ]; then
@@ -64,7 +87,7 @@ cleanup() {
         kill -KILL "-$AGENT_PGID" 2>/dev/null || true
     fi
     if command -v lsof >/dev/null 2>&1; then
-        lsof -ti tcp:8080 2>/dev/null | xargs kill 2>/dev/null || true
+        lsof -ti tcp:"$RUN_PORT" 2>/dev/null | xargs kill 2>/dev/null || true
     fi
 }
 trap cleanup EXIT
@@ -95,15 +118,17 @@ case "$SOLVER_AGENT" in
             -c model_reasoning_effort="$CODEX_EFFORT" \
             ${CODEX_MODEL_ARGS[@]+"${CODEX_MODEL_ARGS[@]}"} \
             -o "$LAST_MSG" \
-            "$PROMPT" 1>&2 &
+            "$SOLVE_PROMPT" 1>&2 &
         ;;
     claude)
         if ! command -v claude >/dev/null 2>&1; then
             echo "claude CLI not found on PATH." >&2
             exit 1
         fi
-        # Reuse the harness's isolated home (Vaadin plugin + Playwright MCP).
-        export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$AGENTIC_DX_DIR/.bench-claude-home}"
+        # Per-workspace Claude home: isolates .claude.json/session state AND points
+        # the Playwright MCP at an isolated browser profile, so a concurrent Claude
+        # solver/grader can't deadlock on the shared MCP profile lock.
+        export CLAUDE_CONFIG_DIR="$(AGENTIC_DX_DIR="$AGENTIC_DX_DIR" bash "$SOLVE_DIR/claude-home.sh" "$WORKSPACE")"
         CLAUDE_MODEL_ARGS=()
         if [ -n "${CLAUDE_MODEL:-}" ]; then CLAUDE_MODEL_ARGS+=(--model "$CLAUDE_MODEL"); fi
         if [ -n "${CLAUDE_EFFORT:-}" ]; then CLAUDE_MODEL_ARGS+=(--effort "$CLAUDE_EFFORT"); fi
@@ -115,7 +140,7 @@ case "$SOLVER_AGENT" in
                 claude ${CLAUDE_MODEL_ARGS[@]+"${CLAUDE_MODEL_ARGS[@]}"} \
                 --dangerously-skip-permissions \
                 --output-format stream-json --verbose \
-                -p "$PROMPT"
+                -p "$SOLVE_PROMPT"
         ) > "$CLAUDE_LOG" 2>&1 &
         ;;
     *)

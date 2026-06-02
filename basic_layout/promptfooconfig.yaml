@@ -4,9 +4,10 @@
 # harness. One agentic task: Codex solves the Vaadin layout task starting from
 # the Vaadin skeleton, then the solution is graded against rubric.md.
 #
-# Run from the repo root (--max-concurrency 1 is REQUIRED here — see PROVIDERS):
+# Run from the repo root. The two solvers are isolated per-run (see PROVIDERS),
+# so they can run in PARALLEL:
 #   export CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"   # Claude solver + grader
-#   npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 1
+#   npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 2
 #   npx promptfoo@latest view
 #
 # See basic_layout/README.md for prerequisites, env vars, and what was skipped.
@@ -43,9 +44,11 @@ prompts:
 # final} JSON — the provider output the graders below consume. Paths are relative
 # to the repo root (run promptfoo there).
 #
-# 2 providers x 1 test = 2 runs. Each solver builds the app and may start a dev
-# server on port 8080, so the two MUST NOT run at once: always pass
-# `--max-concurrency 1` to serialize them (Codex run, then Claude run).
+# 2 providers x 1 test = 2 runs. They are safe to run in PARALLEL: each run gets
+# its own free server port (PORT env -> application.properties), its own Claude
+# config dir + isolated Playwright MCP profile, and its own workspace. Use
+# `--max-concurrency 2` to run Codex and Claude at the same time.
+# (Shared ~/.m2 is the one thing not isolated — warm it once first; see README.)
 # ---------------------------------------------------------------------------
 providers:
   - id: "exec: bash basic_layout/solve-codex.sh"

@@ -36,8 +36,8 @@ grades both.
 - **Keychain / credential plumbing** — `codex` uses its own `codex login`; the
   Claude verifier uses `CLAUDE_CODE_OAUTH_TOKEN` / its config dir.
 - **`format_stream.py` cost/token summary** — promptfoo tracks cost itself. (The
-  watchdog's *intent* is kept: `solve.sh` runs Codex as its own process group and
-  reaps it — and frees port 8080 — on exit, so a backgrounded dev server can't
+  watchdog's *intent* is kept: each solver runs as its own process group and is
+  reaped — and its per-run port freed — on exit, so a backgrounded dev server can't
   block the grader's `run.sh`.)
 - **`agent-time-breakdown.json` telemetry** — the verifier still produces it (it's
   in `verify_prompt.md`); it's preserved in the workspace as an artifact but is
@@ -71,19 +71,35 @@ promptfoo; the `file://` grader paths are relative to this config):
 # Needed for both the Claude solver and the Claude grader:
 export CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"
 
-npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 1
+# Warm the Maven cache ONCE first (shared ~/.m2 is the one un-isolated resource —
+# concurrent cold downloads can race). Skip if you've built this skeleton before:
+( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline )
+
+npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 2
 npx promptfoo@latest view      # side-by-side: codex vs claude, with rubric scores
 ```
 
-**`--max-concurrency 1` is required, not optional.** There are now 2 solver
-providers (2 runs). Each builds the app and may bind **port 8080**; running them in
-parallel collides on that port and thrashes CPU/memory. The flag serializes them:
-Codex solves + is graded, then Claude solves + is graded.
-
-`AGENTIC_DX_DIR` defaults to `../agentic-dx-improvement` (correct for a sibling
-checkout). Each run's workspace (the agent's modified project + logs +
-`verify-result.json`) is written under
+`--max-concurrency 2` runs **Codex and Claude at the same time**. This is safe
+because every run is isolated (see below). `AGENTIC_DX_DIR` defaults to
+`../agentic-dx-improvement` (correct for a sibling checkout). Each run's workspace
+(the agent's modified project + logs + `verify-result.json`) is written under
 `basic_layout/runs/basic_layout/vaadin/<agent>/<timestamp>/` (gitignored).
+
+### Concurrency & isolation
+
+Running both solvers at once means several things would otherwise collide. Each is
+isolated per run:
+
+| Shared resource | Collision if not isolated | How it's isolated |
+|---|---|---|
+| **Server port** | Both apps bind `8080` | A free port is picked per run and exported as `PORT`; the skeleton's `application.properties` already does `server.port=${PORT:8080}`, so `dev.sh`/`run.sh` move off 8080. The port is recorded in `<workspace>/.run-port` and passed to both the solver (prompt note) and the grader (`PORT` env + a verify-prompt override). |
+| **Claude config dir** | Concurrent `.claude.json` / session writes in one `.bench-claude-home` | `claude-home.sh` copies it to `<workspace>/.claude-home` per run. |
+| **Playwright MCP browser** | Two browsers share one persistent profile → singleton-lock deadlock | the per-workspace MCP is re-registered with `--isolated` (in-memory profile) + a per-workspace `--output-dir`. |
+| **Workspace files** | — | already unique per run (`<agent>/<timestamp>-<pid>`). |
+| **`~/.m2`** | concurrent *cold* downloads can race | **not** isolated (isolating would mean re-downloading per run). Warm it once first, as above; concurrent reads of a warm cache are fine. |
+
+After each solver finishes, its process group is reaped and its port freed (before
+grading); the grader likewise reaps its verifier's app server and frees the port.
 
 ## Configuration (env)
 
@@ -99,7 +115,11 @@ checkout). Each run's workspace (the agent's modified project + logs +
 | `CLAUDE_EFFORT` | _(CLI default)_ | `--effort` for the Claude solver (Opus-family) |
 | `RUBRIC_PASS_THRESHOLD` | `0.6` | Floor (fraction of max) for the rubric assertion to pass |
 | `VERIFIER_CMD` | _(unset)_ | Override the grader command (e.g. point at Docker `verify_task.sh`) |
-| `CLAUDE_CONFIG_DIR` | `$AGENTIC_DX_DIR/.bench-claude-home` | Isolated Claude home with Playwright MCP for the grader |
+| `BENCH_CLAUDE_HOME` | `$AGENTIC_DX_DIR/.bench-claude-home` | Source Claude home (Vaadin plugin + Playwright MCP) copied per-run by `claude-home.sh` |
+
+> Note: `CLAUDE_CONFIG_DIR` is **derived per run** (`<workspace>/.claude-home`), not
+> set by you — that's what makes parallel Claude runs safe. Override the *source* it
+> copies from with `BENCH_CLAUDE_HOME`.
 
 ## Note
 
