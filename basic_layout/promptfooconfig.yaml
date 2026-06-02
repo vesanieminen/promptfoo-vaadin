@@ -9,12 +9,14 @@
 # so there is no solve.sh / wrapper scripts and no model env knobs. The only
 # custom code is seed.js (seeds the workspaces) and the two Python graders.
 #
-# Run from the repo root, with caching OFF so each solve actually executes:
-#   npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 2 --no-cache
+# Run from the repo root via the wrapper (warms Maven, --no-cache, run-scoped auth):
+#   bash basic_layout/run.sh
 #   npx promptfoo@latest view
 #
-# Auth: the Claude solver + grader use your interactive `claude /login` — no token
-# needed. Set CLAUDE_CODE_OAUTH_TOKEN only for headless/CI (no interactive login).
+# Auth: the SOLVER uses your `claude /login` (on macOS, the Keychain) — no token.
+# The rubric VERIFIER shells out to `claude` with an ISOLATED CLAUDE_CONFIG_DIR
+# that can't read the macOS Keychain, so it needs CLAUDE_CODE_OAUTH_TOKEN —
+# run.sh injects it into the bench process only (see README), not your rc files.
 #
 # See basic_layout/README.md for prerequisites and what was intentionally skipped.
 
