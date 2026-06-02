@@ -1,0 +1,78 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+#
+# promptfoo port of the `basic_layout` benchmark from the agentic-dx-improvement
+# harness. One agentic task: Codex solves the Vaadin layout task starting from
+# the Vaadin skeleton, then the solution is graded against rubric.md.
+#
+# Run from the repo root. The two solvers are isolated per-run (see PROVIDERS),
+# so they can run in PARALLEL:
+#   export CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"   # Claude solver + grader
+#   npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 2
+#   npx promptfoo@latest view
+#
+# See basic_layout/README.md for prerequisites, env vars, and what was skipped.
+
+description: "agentic-dx basic_layout — Codex vs Claude solve the Vaadin layout task, both graded by the rubric verifier"
+
+# ---------------------------------------------------------------------------
+# PROMPT — this is base_prompt_vaadin.md with the "task is in the cwd" preamble
+# that run_task_local.sh prepends. The real instructions (task.md) and the
+# reference PNGs are seeded into the workspace by solve.sh and read from the
+# agent's cwd. Keep in sync with:
+#   ../agentic-dx-improvement/problems/base_prompt_vaadin.md
+# ---------------------------------------------------------------------------
+prompts:
+  - |
+    The task description and any reference assets are in the current working directory.
+
+    - Solve the task specified in `task.md`.
+    - If there is a `README.md` file, check it as well.
+    - Prefer Vaadin built-in styles to custom ones.
+    - Use the locally installed JDK 25 and Maven.
+    - Use `dev.sh` to run the application in development mode. The dev server has Spring Boot Dev Tools enabled.
+    - Use `run.sh` to run the application in production mode. When running in production mode, the application must be restarted for any changes to show up (including CSS changes).
+    - When asked to write UI tests, write browserless UI tests.
+    - If something can be verified using both a browserless UI test and using Playwright, prefer the browserless UI test.
+    - Use Playwright to look at the end result in a browser.
+      - It is already installed (chromium) and available as an MCP.
+      - Use browser_snapshot / DOM queries for behavior verification; reserve screenshots for layout/visual rubric items.
+
+# ---------------------------------------------------------------------------
+# PROVIDERS — the SOLVERS being compared. Each wrapper sets SOLVER_AGENT and runs
+# solve.sh, which seeds a fresh writable workspace from the skeleton + problem
+# files (stripping rubric.md), runs its agent in it, and prints {workspace, app,
+# final} JSON — the provider output the graders below consume. Paths are relative
+# to the repo root (run promptfoo there).
+#
+# 2 providers x 1 test = 2 runs. They are safe to run in PARALLEL: each run gets
+# its own free server port (PORT env -> application.properties), its own Claude
+# config dir + isolated Playwright MCP profile, and its own workspace. Use
+# `--max-concurrency 2` to run Codex and Claude at the same time.
+# (Shared ~/.m2 is the one thing not isolated — warm it once first; see README.)
+# ---------------------------------------------------------------------------
+providers:
+  - id: "exec: bash basic_layout/solve-codex.sh"
+    label: "codex (solver)"
+  - id: "exec: bash basic_layout/solve-claude.sh"
+    label: "claude (solver)"
+
+# ---------------------------------------------------------------------------
+# TEST — a single agentic task (no per-case vars). Two graders:
+#   1. grade_static.py  — deterministic source checks (cheap gate). Maps the
+#      rubric's Structure + Vaadin-specific bullets that are checkable in code.
+#   2. grade_rubric.py  — the agentic verifier (verify_prompt.md + rubric.md):
+#      runs the app + Playwright across viewports and returns the /21(/24) score.
+# file:// assertion paths resolve relative to THIS config's directory.
+# ---------------------------------------------------------------------------
+tests:
+  - description: "basic_layout implemented from the Vaadin skeleton, graded by the rubric"
+    assert:
+      - type: python
+        value: file://grade_static.py
+        weight: 1
+      - type: python
+        value: file://grade_rubric.py
+        weight: 3
+    # ADR 0002: the rubric is a FLOOR, not the target. The weighted score must
+    # clear this floor for the test to pass; tune via env on the graders.
+    threshold: 0.6

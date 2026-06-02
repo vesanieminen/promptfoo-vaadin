@@ -37,18 +37,26 @@ prompts:
     UI to build: {{spec}}
 
 # ---------------------------------------------------------------------------
-# PROVIDERS — each prompt is run against every provider so you can A/B them.
-#   • Codex CLI  → your ChatGPT subscription (see codex-provider.sh).
-#   • Claude     → native Anthropic provider. `apiKeyRequired: false` reuses the
-#     Claude Code OAuth login already on this machine (your Claude Pro/Max
-#     subscription) instead of an ANTHROPIC_API_KEY — the direct analog of the
-#     Codex line. Run `claude /login` once if promptfoo warns the token expired.
+# PROVIDERS — each prompt runs against every provider, so listing both here
+# gives a Codex-vs-Claude A/B. Both authenticate via a subscription, not an API
+# key:
+#   • Codex  → promptfoo's BUILT-IN Codex provider; reuses the `codex login`
+#     state when OPENAI_API_KEY / CODEX_API_KEY are unset. The flags the old
+#     codex-provider.sh wrapper set are now plain YAML (noted per line).
+#   • Claude → native Anthropic provider; `apiKeyRequired: false` reuses the
+#     Claude Code OAuth login (your Claude Pro/Max plan) instead of an
+#     ANTHROPIC_API_KEY. Run `claude /login` if promptfoo says the token expired.
 # ---------------------------------------------------------------------------
 providers:
-  - "exec: bash codex-provider.sh"
+  - id: openai:codex:gpt-5.5
+    config:
+      model_reasoning_effort: medium   # was: -c model_reasoning_effort="medium"
+      sandbox_mode: read-only          # was: --sandbox read-only
+      skip_git_repo_check: true        # was: --skip-git-repo-check
+      working_dir: ./.eval-scratch     # was: --cd "$(mktemp -d)" — isolate from repo context
   - id: anthropic:messages:claude-opus-4-8
     config:
-      apiKeyRequired: false       # use Claude subscription via Claude Code OAuth
+      apiKeyRequired: false            # Claude subscription via Claude Code OAuth
       temperature: 0.0
   # - openai:gpt-4o-mini          # uncomment to compare against GPT (needs OPENAI_API_KEY)
   # - ollama:chat:llama3.2        # uncomment to test a local model (no key)

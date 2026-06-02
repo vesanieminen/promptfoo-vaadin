@@ -1,0 +1,2 @@
+# Solver workspaces (each run copies the skeleton + builds Maven/target here).
+runs/
