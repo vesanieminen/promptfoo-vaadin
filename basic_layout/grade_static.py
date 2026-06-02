@@ -15,11 +15,15 @@ from `output`: the native agentic providers return the agent's final message,
 not a workspace path.
 """
 
+import base64
 import glob
 import os
 import re
 
 _HERE = os.path.dirname(os.path.abspath(__file__))  # promptfoo/basic_layout
+
+# Reference images seeded from the problem dir — not solver screenshots.
+_REFERENCE_IMAGES = {"Basic layout.png", "Basic layout (mobile).png"}
 
 
 def _agent_from_provider(context):
@@ -42,6 +46,28 @@ def _app_dir(context):
     if not agent:
         return None
     return os.path.join(_HERE, "workspaces", agent, "app")
+
+
+def _solver_screenshots(context):
+    """Return markdown image tags for PNGs the solver left in the workspace root."""
+    agent = _agent_from_provider(context)
+    if not agent:
+        return ""
+    ws = os.path.join(_HERE, "workspaces", agent)
+    imgs = []
+    for name in sorted(os.listdir(ws)) if os.path.isdir(ws) else []:
+        if not name.lower().endswith(".png"):
+            continue
+        if name in _REFERENCE_IMAGES:
+            continue
+        path = os.path.join(ws, name)
+        try:
+            with open(path, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode()
+            imgs.append("![{}](data:image/png;base64,{})".format(name, b64))
+        except Exception:
+            pass
+    return "\n\n".join(imgs)
 
 
 def get_assert(output, context=None):
@@ -108,9 +134,13 @@ def get_assert(output, context=None):
     critical_ok = all(ok for _, ok, crit in checks if crit)
 
     lines = ["{:4}  {}".format("PASS" if ok else "FAIL", name) for name, ok, _ in checks]
+    reason = ("Static source checks (Structure & Vaadin-specific) "
+              "{}/{} passed:\n".format(passed, total) + "\n".join(lines))
+    screenshots = _solver_screenshots(context)
+    if screenshots:
+        reason += "\n\n" + screenshots
     return {
         "pass": bool(critical_ok),
         "score": score,
-        "reason": "Static source checks (Structure & Vaadin-specific) "
-                  "{}/{} passed:\n".format(passed, total) + "\n".join(lines),
+        "reason": reason,
     }
