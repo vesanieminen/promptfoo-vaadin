@@ -1,0 +1,107 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+#
+# Promptfoo eval config. Run with:  npx promptfoo@latest eval
+# Then view results:                npx promptfoo@latest view
+#
+# Concept: prompts × providers × tests. Every prompt is run against every
+# provider for every test case, and each result is scored by its assertions.
+#
+# This eval tests an LLM's ability to generate a Vaadin Flow (Java) view from a
+# short UI description — modelled on the simple v25.2 starter (Spring Boot +
+# Vaadin Flow; views extend VerticalLayout, are annotated with @Route, and give
+# components stable ids via setId(...)).
+
+description: "Vaadin Flow view code-generation eval"
+
+# ---------------------------------------------------------------------------
+# PROMPT — the template sent to the model. {{var}} placeholders are filled per
+# test case (see `tests`). Add a second `- |` item to A/B a different wording.
+# ---------------------------------------------------------------------------
+prompts:
+  - |
+    You are a senior Vaadin Flow (Java) developer. Generate ONE complete,
+    compilable Java class for a Vaadin Flow view from the request below.
+
+    Rules:
+    - Package: com.example
+    - Use server-side Vaadin Flow components only (com.vaadin.flow.component.*,
+      e.g. TextField, EmailField, PasswordField, TextArea, Button, H1) — never
+      React, TypeScript, or HTML templates.
+    - Annotate the class with @Route mapped to the given route path.
+    - The view must extend VerticalLayout and add its components in the constructor.
+    - Give every input field and button a stable id via setId(...).
+    - Output ONLY the raw Java source — no prose, no markdown code fences.
+
+    Route path: "{{route}}"
+    Class name: {{className}}
+    UI to build: {{spec}}
+
+# ---------------------------------------------------------------------------
+# PROVIDERS — routes each prompt through the Codex CLI on your ChatGPT
+# subscription (see codex-provider.sh). Uncomment others to compare.
+# ---------------------------------------------------------------------------
+providers:
+  - "exec: bash codex-provider.sh"
+  # - openai:gpt-4o-mini          # uncomment to compare against GPT (needs OPENAI_API_KEY)
+  # - ollama:chat:llama3.2        # uncomment to test a local model (no key)
+
+# ---------------------------------------------------------------------------
+# DEFAULT ASSERTIONS — applied to EVERY test case. These check the output is a
+# plausible server-side Vaadin Flow view (raw Java, right framework, routed).
+# ---------------------------------------------------------------------------
+defaultTest:
+  assert:
+    - type: contains
+      value: "package com.example"
+    - type: contains
+      value: "@Route"
+    - type: contains
+      value: "extends VerticalLayout"
+    - type: contains
+      value: "com.vaadin.flow.component"
+    # Must be server-side Java Flow — reject React / TS / JSX leakage.
+    - type: javascript
+      value: "!output.includes('import {') && !output.includes('React')"
+    # We asked for raw source, so there should be no markdown code fences.
+    - type: javascript
+      value: "!output.includes('```')"
+
+# ---------------------------------------------------------------------------
+# TESTS — each `vars` block fills {{route}}, {{className}}, {{spec}};
+# `assert` adds checks specific to that view.
+# ---------------------------------------------------------------------------
+tests:
+  - description: "Login view"
+    vars:
+      route: "login"
+      className: "LoginView"
+      spec: "A username text field, a password field, and a 'Log in' button."
+    assert:
+      - type: contains
+        value: '@Route("login")'
+      - type: contains
+        value: "PasswordField"
+      - type: contains-all
+        value: ["TextField", "Button", "setId"]
+
+  - description: "Sign-up view (root route)"
+    vars:
+      route: ""
+      className: "SignUpView"
+      spec: "A heading 'Sign up', a name field, an email field, and a 'Submit' button."
+    assert:
+      - type: contains
+        value: "EmailField"
+      - type: contains-all
+        value: ["H1", "TextField", "Button"]
+
+  - description: "Contact form view"
+    vars:
+      route: "contact"
+      className: "ContactView"
+      spec: "A name field, an email field, a multi-line message area, and a 'Send' button."
+    assert:
+      - type: contains
+        value: '@Route("contact")'
+      - type: contains-all
+        value: ["EmailField", "TextArea", "Button"]
