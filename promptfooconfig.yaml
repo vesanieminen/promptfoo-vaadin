@@ -37,11 +37,19 @@ prompts:
     UI to build: {{spec}}
 
 # ---------------------------------------------------------------------------
-# PROVIDERS — routes each prompt through the Codex CLI on your ChatGPT
-# subscription (see codex-provider.sh). Uncomment others to compare.
+# PROVIDERS — each prompt is run against every provider so you can A/B them.
+#   • Codex CLI  → your ChatGPT subscription (see codex-provider.sh).
+#   • Claude     → native Anthropic provider. `apiKeyRequired: false` reuses the
+#     Claude Code OAuth login already on this machine (your Claude Pro/Max
+#     subscription) instead of an ANTHROPIC_API_KEY — the direct analog of the
+#     Codex line. Run `claude /login` once if promptfoo warns the token expired.
 # ---------------------------------------------------------------------------
 providers:
   - "exec: bash codex-provider.sh"
+  - id: anthropic:messages:claude-opus-4-8
+    config:
+      apiKeyRequired: false       # use Claude subscription via Claude Code OAuth
+      temperature: 0.0
   # - openai:gpt-4o-mini          # uncomment to compare against GPT (needs OPENAI_API_KEY)
   # - ollama:chat:llama3.2        # uncomment to test a local model (no key)
 
