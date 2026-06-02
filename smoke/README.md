@@ -24,7 +24,12 @@ else `basic_layout/.bench-token`) — never your rc files.
 - **Solver PASSES, verification FAILS** → you have no token. The eval path works
   (Keychain login), but the verifier needs a token. Provide one and re-run:
   ```bash
-  claude setup-token > basic_layout/.bench-token   # gitignored, one time
+  # Run setup-token INTERACTIVELY (it opens a browser), then copy the printed
+  # sk-ant-oat01-... value and write ONLY that into the file. Do NOT redirect
+  # setup-token with `>` — its UI prints to stdout, so the file would capture the
+  # whole UI (and leak the token), not just the token.
+  claude setup-token
+  printf %s 'sk-ant-oat01-...' > basic_layout/.bench-token   # gitignored, one time
   bash smoke/run.sh
   ```
 - **Both FAIL** → you're not logged into Claude Code at all. Run `claude /login`.

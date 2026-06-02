@@ -177,7 +177,10 @@ npx promptfoo@latest view      # side-by-side: codex vs claude, with rubric scor
 Manual equivalent (token still run-scoped — this shell only, not your rc):
 
 ```bash
-export CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"   # verifier auth, this shell only
+# Get a token: run `claude setup-token` interactively (it opens a browser) and
+# copy the printed sk-ant-oat01-... value. Do NOT redirect setup-token to a file —
+# its UI prints to stdout, so a redirect captures the whole UI, not just the token.
+export CLAUDE_CODE_OAUTH_TOKEN='sk-ant-oat01-...'   # paste it; this shell only, not your rc
 ( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline )  # warm ~/.m2 once
 # --no-cache is REQUIRED: the agentic providers cache by prompt, so without it a
 # second run returns the first run's agent output instead of actually solving.
