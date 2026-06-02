@@ -152,11 +152,12 @@ result it wraps):
 > `bypassPermissions`) so they can edit files, run Maven, and start a server. Run
 > only on a trusted machine.
 
-> **Model defaulting (reproducibility).** No model is pinned, so the Claude
-> provider runs on the *ambient* default model — a probe ran on `claude-opus-4-8`,
-> not the `claude-sonnet-4-6` the old shell harness used. For comparable, portable
-> numbers, pin a model (e.g. `id: anthropic:claude-code` → `config.model:
-> claude-sonnet-4-6`), since the default varies by machine/login.
+> **Model pinning (reproducibility).** Both solvers pin their model — Claude on
+> `claude-opus-4-8` (`config.model`), Codex on `gpt-5.5` (in its provider id) — so
+> the numbers are comparable across machines. Without the pin the Claude provider
+> would fall back to the *ambient* default model, which varies by machine/login
+> (a probe ran on `claude-opus-4-8`, not the `claude-sonnet-4-6` the old shell
+> harness used). Edit the pins to benchmark other models.
 
 ## Run it
 
