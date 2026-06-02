@@ -1,39 +1,58 @@
 """Deterministic source-level grader for the basic_layout task.
 
-promptfoo custom Python assertion. It reads the produced app from the workspace
-that solve.sh emitted and checks the parts of the rubric that are verifiable by
-reading the source — the Structure section (presence) and the Vaadin-specific
-section ("verify by reading the source — DOM inspection alone is not sufficient").
+promptfoo custom Python assertion. It reads the produced app from the
+per-provider workspace seed.js created (workspaces/<codex|claude>/app) and
+checks the parts of the rubric verifiable by reading source — the Structure
+section (presence) and the Vaadin-specific section ("verify by reading the
+source — DOM inspection alone is not sufficient").
 
 This is the cheap, reproducible gate. The behavioural / visual rubric bullets
 (alignment, scrolling, viewport behaviour) are graded by grade_rubric.py.
 
 Contract: define get_assert(output, context) -> {pass, score, reason}.
-`output` is the JSON string solve.sh printed: {"workspace", "app", "final"}.
+The workspace is located from `context['provider']` (the row being graded), not
+from `output`: the native agentic providers return the agent's final message,
+not a workspace path.
 """
 
 import glob
-import json
 import os
 import re
 
+_HERE = os.path.dirname(os.path.abspath(__file__))  # promptfoo/basic_layout
 
-def _app_dir(output):
-    try:
-        data = json.loads(output)
-    except Exception:
+
+def _agent_from_provider(context):
+    """Map the grading row's provider to its solver name (codex|claude)."""
+    prov = (context or {}).get("provider")
+    if isinstance(prov, dict):
+        ident = prov.get("label") or prov.get("id") or ""
+    else:
+        ident = str(prov or "")
+    ident = ident.lower()
+    if "codex" in ident:
+        return "codex"
+    if "claude" in ident:
+        return "claude"
+    return None
+
+
+def _app_dir(context):
+    agent = _agent_from_provider(context)
+    if not agent:
         return None
-    return data.get("app")
+    return os.path.join(_HERE, "workspaces", agent, "app")
 
 
 def get_assert(output, context=None):
-    app = _app_dir(output)
+    app = _app_dir(context)
     if not app or not os.path.isdir(app):
         return {
             "pass": False,
             "score": 0.0,
-            "reason": "Could not locate the produced app/ dir from the provider output "
-                      "(expected JSON with an \"app\" path).",
+            "reason": "Could not locate the produced app/ dir for this provider "
+                      "(expected workspaces/<codex|claude>/app from "
+                      "context['provider']).",
         }
 
     java_files = glob.glob(os.path.join(app, "src/main/java/**/*.java"), recursive=True)

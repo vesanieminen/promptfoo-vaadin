@@ -1,0 +1,3 @@
+# Local install of the agentic provider SDKs (declared in package.json).
+# Reproduce with `npm install`; the tree is never committed.
+node_modules/
