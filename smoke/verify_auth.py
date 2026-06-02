@@ -36,9 +36,9 @@ def get_assert(output, context=None):
     token_set = bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"))
 
     if "not logged in" in low or "please run /login" in low:
-        hint = ("No token in the environment. Provide one run-scoped: "
-                "`claude setup-token > basic_layout/.bench-token`, then run via "
-                "`bash smoke/run.sh`."
+        hint = ("No token in the environment. Run `claude setup-token` "
+                "(interactive), copy the printed sk-ant-oat01-... value into "
+                "basic_layout/.bench-token, then run `bash smoke/run.sh`."
                 if not token_set else
                 "A CLAUDE_CODE_OAUTH_TOKEN is set but was rejected — it may be "
                 "expired/invalid; re-mint with `claude setup-token`.")

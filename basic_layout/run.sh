@@ -15,8 +15,13 @@
 #
 # Token source (first hit wins):
 #   1. $CLAUDE_CODE_OAUTH_TOKEN already set in this shell
-#   2. basic_layout/.bench-token   (gitignored; a single line: the token)
-#   3. minted interactively via `claude setup-token` (opens a browser, one time)
+#   2. basic_layout/.bench-token   (gitignored; ONE line — just the sk-ant-... token)
+#
+# Create .bench-token by running `claude setup-token` INTERACTIVELY (it opens a
+# browser), copying the printed sk-ant-oat01-... value, then writing ONLY that:
+#     printf %s 'sk-ant-oat01-...' > basic_layout/.bench-token
+# Do NOT redirect `claude setup-token` into the file — its interactive UI prints to
+# stdout, so the redirect captures the whole UI (and leaks the token into the file).
 #
 # Usage:
 #   bash basic_layout/run.sh                 # run the benchmark
@@ -27,18 +32,29 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 TOKEN_FILE="basic_layout/.bench-token"
-if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
-  if [ -f "$TOKEN_FILE" ]; then
-    CLAUDE_CODE_OAUTH_TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE")"
-    echo "[run] auth: using token from $TOKEN_FILE (run-scoped)" >&2
-  else
-    echo "[run] auth: no \$CLAUDE_CODE_OAUTH_TOKEN and no $TOKEN_FILE." >&2
-    echo "[run]       minting one with 'claude setup-token' (interactive, one time)…" >&2
-    echo "[run]       tip: save it to $TOKEN_FILE to skip this next time." >&2
-    CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"
-  fi
+TOK=""; SRC=""
+if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+  TOK="$(printf '%s' "$CLAUDE_CODE_OAUTH_TOKEN" | tr -d '[:space:]')"; SRC="\$CLAUDE_CODE_OAUTH_TOKEN (env)"
+elif [ -f "$TOKEN_FILE" ]; then
+  TOK="$(tr -d '[:space:]' < "$TOKEN_FILE")"; SRC="$TOKEN_FILE"
+else
+  echo "[run] ERROR: no \$CLAUDE_CODE_OAUTH_TOKEN and no $TOKEN_FILE." >&2
+  echo "[run]   The rubric verifier needs a token (its isolated CLAUDE_CONFIG_DIR" >&2
+  echo "[run]   can't read the Keychain on macOS). Create it once:" >&2
+  echo "[run]     claude setup-token   # interactive; copy the printed sk-ant-oat01-... value" >&2
+  echo "[run]     printf %s 'sk-ant-oat01-...' > $TOKEN_FILE" >&2
+  exit 1
 fi
-export CLAUDE_CODE_OAUTH_TOKEN
+# Reject anything that isn't a bare token (e.g. a redirected setup-token UI dump).
+if ! printf '%s' "$TOK" | grep -Eq '^sk-ant-[A-Za-z0-9_-]+$'; then
+  echo "[run] ERROR: $SRC is not a bare token (expected just sk-ant-...)." >&2
+  echo "[run]   Don't redirect 'claude setup-token' into $TOKEN_FILE — that captures its" >&2
+  echo "[run]   interactive UI. Put ONLY the sk-ant-oat01-... value in the file:" >&2
+  echo "[run]     printf %s 'sk-ant-oat01-...' > $TOKEN_FILE" >&2
+  exit 1
+fi
+export CLAUDE_CODE_OAUTH_TOKEN="$TOK"
+echo "[run] auth: token from $SRC (run-scoped)" >&2
 
 # Warm the shared Maven cache once (cheap if already warm; avoids cold-download races
 # between the two concurrent solvers). ~/.m2 is the one un-isolated resource.

@@ -14,15 +14,28 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 TOKEN_FILE="basic_layout/.bench-token"
+TOK=""; SRC=""
 if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
-  echo "[smoke] auth: using \$CLAUDE_CODE_OAUTH_TOKEN from env → verification should PASS" >&2
+  TOK="$(printf '%s' "$CLAUDE_CODE_OAUTH_TOKEN" | tr -d '[:space:]')"; SRC="\$CLAUDE_CODE_OAUTH_TOKEN (env)"
 elif [ -f "$TOKEN_FILE" ]; then
-  export CLAUDE_CODE_OAUTH_TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE")"
-  echo "[smoke] auth: token from $TOKEN_FILE (run-scoped) → verification should PASS" >&2
+  TOK="$(tr -d '[:space:]' < "$TOKEN_FILE")"; SRC="$TOKEN_FILE"
+fi
+if [ -n "$TOK" ]; then
+  # Reject anything that isn't a bare token (e.g. a redirected setup-token UI dump).
+  if printf '%s' "$TOK" | grep -Eq '^sk-ant-[A-Za-z0-9_-]+$'; then
+    export CLAUDE_CODE_OAUTH_TOKEN="$TOK"
+    echo "[smoke] auth: token from $SRC (run-scoped) → verification should PASS" >&2
+  else
+    echo "[smoke] ERROR: $SRC is not a bare token (expected just sk-ant-...)." >&2
+    echo "[smoke]   Don't redirect 'claude setup-token' into $TOKEN_FILE — it captures the UI." >&2
+    echo "[smoke]   Put ONLY the sk-ant-oat01-... value in it:" >&2
+    echo "[smoke]     printf %s 'sk-ant-oat01-...' > $TOKEN_FILE" >&2
+    exit 1
+  fi
 else
-  echo "[smoke] auth: NO token (no \$CLAUDE_CODE_OAUTH_TOKEN, no $TOKEN_FILE)." >&2
-  echo "[smoke]       → solver/eval should PASS (Keychain login); verification should FAIL." >&2
-  echo "[smoke]       To test verification too: claude setup-token > $TOKEN_FILE" >&2
+  echo "[smoke] auth: NO token → solver/eval should PASS (Keychain); verification should FAIL." >&2
+  echo "[smoke]       To test verification: run 'claude setup-token' (interactive), copy the" >&2
+  echo "[smoke]       sk-ant-oat01-... value, then: printf %s 'sk-ant-oat01-...' > $TOKEN_FILE" >&2
 fi
 
 exec npx promptfoo@latest eval -c smoke/promptfooconfig.yaml --no-cache "$@"
