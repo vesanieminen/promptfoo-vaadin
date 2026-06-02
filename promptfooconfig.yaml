@@ -37,11 +37,20 @@ prompts:
     UI to build: {{spec}}
 
 # ---------------------------------------------------------------------------
-# PROVIDERS — routes each prompt through the Codex CLI on your ChatGPT
-# subscription (see codex-provider.sh). Uncomment others to compare.
+# PROVIDERS — drives Codex on your ChatGPT subscription via promptfoo's
+# BUILT-IN Codex provider (replaces the old codex-provider.sh wrapper).
+# Auth reuses the `codex login` state when OPENAI_API_KEY / CODEX_API_KEY are
+# unset — no API key, billed to your ChatGPT plan. Everything the wrapper did
+# is now plain YAML, so there's no shell script to maintain. Each line below
+# notes the codex-provider.sh flag it replaces.
 # ---------------------------------------------------------------------------
 providers:
-  - "exec: bash codex-provider.sh"
+  - id: openai:codex:gpt-5.5
+    config:
+      model_reasoning_effort: medium   # was: -c model_reasoning_effort="medium"
+      sandbox_mode: read-only          # was: --sandbox read-only
+      skip_git_repo_check: true        # was: --skip-git-repo-check
+      working_dir: ./.eval-scratch     # was: --cd "$(mktemp -d)" — isolate from repo context
   # - openai:gpt-4o-mini          # uncomment to compare against GPT (needs OPENAI_API_KEY)
   # - ollama:chat:llama3.2        # uncomment to test a local model (no key)
 

@@ -1,0 +1,5 @@
+# Empty scratch dir used as the Codex provider's working_dir, isolating it from
+# repo context (the portable replacement for the old script's `mktemp -d`).
+# Keep the directory tracked, but ignore anything that lands inside it.
+*
+!.gitignore
