@@ -1,0 +1,3 @@
+# Agentic solver scratch working dir (recreated each run)
+scratch/*
+!scratch/.gitkeep
