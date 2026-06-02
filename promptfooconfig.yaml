@@ -57,7 +57,7 @@ providers:
   - id: anthropic:messages:claude-opus-4-8
     config:
       apiKeyRequired: false            # Claude subscription via Claude Code OAuth
-      temperature: 0.0
+      # no temperature: Opus 4.8 ignores sampling params (temperature/top_p/top_k)
   # - openai:gpt-4o-mini          # uncomment to compare against GPT (needs OPENAI_API_KEY)
   # - ollama:chat:llama3.2        # uncomment to test a local model (no key)
 
