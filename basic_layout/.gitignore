@@ -1,2 +1,4 @@
-# Solver workspaces (each run copies the skeleton + builds Maven/target here).
-runs/
+# Per-provider solver workspaces seed.js (re)creates each run: a copy of the
+# skeleton + task files, the agent's edits, the Maven build, the isolated Claude
+# home, and the verifier's verify-result.json.
+workspaces/

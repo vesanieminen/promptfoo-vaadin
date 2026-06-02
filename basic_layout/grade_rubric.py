@@ -3,7 +3,7 @@
 promptfoo custom Python assertion that ports verify_task.sh + verify_prompt.md
 from the agentic-dx-improvement harness into promptfoo. It:
 
-  1. Reads the workspace path from the provider output (solve.sh JSON).
+  1. Locates the per-provider workspace seed.js created (from context['provider']).
   2. Copies rubric.md back into the workspace (the solver never saw it).
   3. Runs the agentic verifier (Claude + Playwright MCP, driven by
      verify_prompt.md) in the workspace. The verifier runs app/run.sh, inspects
@@ -12,12 +12,14 @@ from the agentic-dx-improvement harness into promptfoo. It:
      normalized score (handles the 21- vs 24-point total automatically).
 
 CONCURRENCY: graders for the two solver rows can run at the same time, so each
-run is isolated:
-  - server port: the per-run port written by solve.sh ($WORKSPACE/.run-port) is
+is isolated:
+  - server port: the baked per-provider port (workspaces/<agent>/.run-port) is
     set as PORT for the verifier and injected into the verify prompt, so the
-    grader's app and the solver's app never share 8080;
-  - Claude config + Playwright MCP: a per-workspace home via claude-home.sh.
-After grading, the verifier's process group is reaped and the port freed.
+    two graders' apps never share 8080;
+  - Claude config + Playwright MCP: a per-workspace home (workspaces/<agent>/
+    .claude-home, built by seed.js with an --isolated browser profile).
+The run's port is freed before the verifier starts (clearing any dev server the
+solver left running) and after it finishes.
 
 Per ADR 0002, the rubric is a FLOOR, not the optimization target: pass = score
 clears RUBRIC_PASS_THRESHOLD. The full trace + agent-time-breakdown.json the
@@ -38,13 +40,36 @@ import shutil
 import signal
 import subprocess
 
-_HERE = os.path.dirname(os.path.abspath(__file__))                # promptfoo/basic_layout
-_REPO_ROOT = os.path.dirname(_HERE)                               # promptfoo
+_HERE = os.path.dirname(os.path.abspath(__file__))               # promptfoo/basic_layout
+_REPO_ROOT = os.path.dirname(_HERE)                              # promptfoo
 _AGENTIC_DX_DIR = os.environ.get(
     "AGENTIC_DX_DIR", os.path.join(_REPO_ROOT, "..", "agentic-dx-improvement")
 )
 _PROBLEM = os.environ.get("PROBLEM", "basic_layout")
 _PASS_THRESHOLD = float(os.environ.get("RUBRIC_PASS_THRESHOLD", "0.6"))
+
+
+def _agent_from_provider(context):
+    """Map the grading row's provider to its solver name (codex|claude)."""
+    prov = (context or {}).get("provider")
+    if isinstance(prov, dict):
+        ident = prov.get("label") or prov.get("id") or ""
+    else:
+        ident = str(prov or "")
+    ident = ident.lower()
+    if "codex" in ident:
+        return "codex"
+    if "claude" in ident:
+        return "claude"
+    return None
+
+
+def _workspace(context):
+    agent = _agent_from_provider(context)
+    if not agent:
+        return None
+    ws = os.path.join(_HERE, "workspaces", agent)
+    return ws if os.path.isdir(ws) else None
 
 
 def _run_port(workspace):
@@ -56,18 +81,12 @@ def _run_port(workspace):
 
 
 def _claude_home(workspace):
-    """Isolated CLAUDE_CONFIG_DIR for this workspace (also isolates the MCP browser)."""
-    try:
-        out = subprocess.run(
-            ["bash", os.path.join(_HERE, "claude-home.sh"), workspace],
-            capture_output=True, text=True, check=True,
-            env=dict(os.environ, AGENTIC_DX_DIR=_AGENTIC_DX_DIR),
-        )
-        path = (out.stdout or "").strip().splitlines()
-        if path and os.path.isdir(path[-1]):
-            return path[-1]
-    except Exception:
-        pass
+    """Isolated CLAUDE_CONFIG_DIR for this workspace (built by seed.js); the
+    --isolated Playwright profile in it keeps concurrent verifiers from
+    deadlocking on a shared browser profile."""
+    home = os.path.join(workspace, ".claude-home")
+    if os.path.isdir(home):
+        return home
     # Fallback: the shared bench home (fine when runs are serialized).
     return os.environ.get(
         "CLAUDE_CONFIG_DIR", os.path.join(_AGENTIC_DX_DIR, ".bench-claude-home")
@@ -101,15 +120,15 @@ def _run_verifier(workspace):
     if not os.path.isfile(verify_prompt_file):
         return None
 
-    # The verifier expects rubric.md + prompt.txt + app/ in its cwd. solve.sh
+    # The verifier expects rubric.md + prompt.txt + app/ in its cwd. seed.js
     # already wrote prompt.txt and app/; restore the rubric the solver never saw.
     if os.path.isfile(rubric_src):
         shutil.copy(rubric_src, os.path.join(workspace, "rubric.md"))
     with open(verify_prompt_file, encoding="utf-8") as f:
         verify_prompt = f.read()
 
-    # The verify prompt hardcodes port 8080; override it with this run's port so
-    # concurrent graders don't collide (and the right app is inspected).
+    # The verify prompt hardcodes port 8080; override it with this run's baked
+    # port so concurrent graders don't collide (and the right app is inspected).
     port = _run_port(workspace)
     if port != 8080:
         verify_prompt += (
@@ -123,6 +142,9 @@ def _run_verifier(workspace):
     env = dict(os.environ)
     env["PORT"] = str(port)
     env["CLAUDE_CONFIG_DIR"] = _claude_home(workspace)
+
+    # Clear any dev server the solver left bound to this run's port before run.sh.
+    _free_port(port)
 
     verifier_cmd = os.environ.get("VERIFIER_CMD")
     if verifier_cmd:
@@ -149,12 +171,12 @@ def _run_verifier(workspace):
 
 
 def get_assert(output, context=None):
-    try:
-        workspace = json.loads(output)["workspace"]
-    except Exception as e:
+    workspace = _workspace(context)
+    if not workspace:
         return {"pass": False, "score": 0.0,
-                "reason": "Bad provider output (expected JSON with a "
-                          "\"workspace\" path): {}".format(e)}
+                "reason": "Could not locate this provider's workspace "
+                          "(expected workspaces/<codex|claude> from "
+                          "context['provider'])."}
 
     result_path = _run_verifier(workspace)
     if not result_path or not os.path.isfile(result_path):

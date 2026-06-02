@@ -1,24 +1,38 @@
 # yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
 #
 # promptfoo port of the `basic_layout` benchmark from the agentic-dx-improvement
-# harness. One agentic task: Codex solves the Vaadin layout task starting from
-# the Vaadin skeleton, then the solution is graded against rubric.md.
+# harness. Two agents — Codex and Claude — solve the Vaadin layout task starting
+# from the Vaadin skeleton; both solutions are graded against rubric.md.
 #
-# Run from the repo root. The two solvers are isolated per-run (see PROVIDERS),
-# so they can run in PARALLEL:
+# Unlike the bespoke shell harness, the SOLVERS are promptfoo's BUILT-IN agentic
+# providers (just like the repo-root promptfooconfig.yaml uses native providers),
+# so there is no solve.sh / wrapper scripts and no model env knobs. The only
+# custom code is seed.js (seeds the workspaces) and the two Python graders.
+#
+# Run from the repo root, with caching OFF so each solve actually executes:
 #   export CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"   # Claude solver + grader
-#   npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 2
+#   npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 2 --no-cache
 #   npx promptfoo@latest view
 #
-# See basic_layout/README.md for prerequisites, env vars, and what was skipped.
+# See basic_layout/README.md for prerequisites and what was intentionally skipped.
 
 description: "agentic-dx basic_layout — Codex vs Claude solve the Vaadin layout task, both graded by the rubric verifier"
 
 # ---------------------------------------------------------------------------
-# PROMPT — this is base_prompt_vaadin.md with the "task is in the cwd" preamble
-# that run_task_local.sh prepends. The real instructions (task.md) and the
-# reference PNGs are seeded into the workspace by solve.sh and read from the
-# agent's cwd. Keep in sync with:
+# SEED — a beforeAll extension hook that (re)creates one fresh workspace per
+# solver provider (workspaces/codex, workspaces/claude) from the
+# agentic-dx-improvement sources: skeleton + task files, rubric stripped, a
+# per-provider server port baked in, and an isolated Claude home for the
+# verifier. Replaces the seeding half of the old solve.sh + all of claude-home.sh.
+# Override the source location with AGENTIC_DX_DIR (default: sibling checkout).
+# ---------------------------------------------------------------------------
+extensions:
+  - file://seed.js:seed
+
+# ---------------------------------------------------------------------------
+# PROMPT — base_prompt_vaadin.md plus the "task is in the cwd" preamble. The
+# real instructions (task.md) and reference PNGs are seeded into each workspace
+# by seed.js and read by the agent from its working_dir. Keep in sync with:
 #   ../agentic-dx-improvement/problems/base_prompt_vaadin.md
 # ---------------------------------------------------------------------------
 prompts:
@@ -37,32 +51,63 @@ prompts:
       - It is already installed (chromium) and available as an MCP.
       - Use browser_snapshot / DOM queries for behavior verification; reserve screenshots for layout/visual rubric items.
 
-# ---------------------------------------------------------------------------
-# PROVIDERS — the SOLVERS being compared. Each wrapper sets SOLVER_AGENT and runs
-# solve.sh, which seeds a fresh writable workspace from the skeleton + problem
-# files (stripping rubric.md), runs its agent in it, and prints {workspace, app,
-# final} JSON — the provider output the graders below consume. Paths are relative
-# to the repo root (run promptfoo there).
-#
-# 2 providers x 1 test = 2 runs. They are safe to run in PARALLEL: each run gets
-# its own free server port (PORT env -> application.properties), its own Claude
-# config dir + isolated Playwright MCP profile, and its own workspace. Use
-# `--max-concurrency 2` to run Codex and Claude at the same time.
-# (Shared ~/.m2 is the one thing not isolated — warm it once first; see README.)
-# ---------------------------------------------------------------------------
-providers:
-  - id: "exec: bash basic_layout/solve-codex.sh"
-    label: "codex (solver)"
-  - id: "exec: bash basic_layout/solve-claude.sh"
-    label: "claude (solver)"
+    The app's HTTP port is set in `app/src/main/resources/application.properties`
+    (`server.port`); use that port (not necessarily 8080) when previewing in a browser.
 
 # ---------------------------------------------------------------------------
-# TEST — a single agentic task (no per-case vars). Two graders:
-#   1. grade_static.py  — deterministic source checks (cheap gate). Maps the
-#      rubric's Structure + Vaadin-specific bullets that are checkable in code.
+# PROVIDERS — the two SOLVERS, as promptfoo's native agentic providers. Config
+# is operational only (working dir, full file/command access, MCP, auth); there
+# is deliberately NO model/effort/temperature tuning. Both authenticate via a
+# subscription, not an API key:
+#   • Codex  → built-in Codex provider; reuses the `codex login` (ChatGPT) state
+#     when OPENAI_API_KEY / CODEX_API_KEY are unset.
+#   • Claude → built-in Claude Code (agentic) provider; `apiKeyRequired: false`
+#     reuses CLAUDE_CODE_OAUTH_TOKEN / the Claude Code login.
+#
+# Each runs in its OWN working_dir (seeded above) on its OWN baked port, so the
+# two rows are safe to run together with `--max-concurrency 2`. Playwright is
+# registered per provider as an in-memory (`--isolated`) browser so concurrent
+# solvers don't deadlock on a shared profile lock.
+# ---------------------------------------------------------------------------
+providers:
+  - id: openai:codex:gpt-5.5            # model lives in the id, like the root config
+    label: codex
+    config:
+      working_dir: workspaces/codex     # resolved relative to this config's dir
+      sandbox_mode: danger-full-access  # solving = write files, run mvn, start a server
+      skip_git_repo_check: true
+      cli_config:                       # Codex has no first-class mcp key; MCP goes via cli_config
+        mcp_servers:
+          playwright:
+            command: npx
+            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated"]
+
+  - id: anthropic:claude-code           # = anthropic:claude-agent-sdk (the agentic Claude Code provider)
+    label: claude
+    config:
+      apiKeyRequired: false             # Claude subscription via CLAUDE_CODE_OAUTH_TOKEN, no API key
+      working_dir: workspaces/claude
+      permission_mode: bypassPermissions
+      allow_dangerously_skip_permissions: true
+      allow_all_tools: true
+      setting_sources: []               # ignore the user's personal settings/plugins → clean benchmark
+      plugins:                          # the Vaadin Claude plugin (layouts, responsive-layouts, …)
+        - type: local
+          path: ../../agentic-dx-improvement/claude-plugin
+      mcp:
+        servers:
+          - name: playwright
+            command: npx
+            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated"]
+
+# ---------------------------------------------------------------------------
+# TEST — a single agentic task (no per-case vars). Each grader locates its row's
+# workspace from the provider in `context`. Two graders:
+#   1. grade_static.py  — deterministic source checks (cheap gate): the rubric's
+#      Structure + Vaadin-specific bullets that are verifiable by reading code.
 #   2. grade_rubric.py  — the agentic verifier (verify_prompt.md + rubric.md):
-#      runs the app + Playwright across viewports and returns the /21(/24) score.
-# file:// assertion paths resolve relative to THIS config's directory.
+#      runs the app + Playwright across viewports and returns the /21 (/24) score.
+# file:// paths resolve relative to THIS config's directory.
 # ---------------------------------------------------------------------------
 tests:
   - description: "basic_layout implemented from the Vaadin skeleton, graded by the rubric"
