@@ -36,6 +36,7 @@ Env:
 
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -47,6 +48,88 @@ _AGENTIC_DX_DIR = os.environ.get(
 )
 _PROBLEM = os.environ.get("PROBLEM", "basic_layout")
 _PASS_THRESHOLD = float(os.environ.get("RUBRIC_PASS_THRESHOLD", "0.6"))
+
+# Bash command fragments that signal "Vaadin API archaeology" — the agent
+# digging through jars / decompiling / spelunking the local Maven cache because
+# it couldn't recall an API. CONTEXT.md calls this out as a key DX pain signal.
+_ARCHAEOLOGY_HINTS = ("jar tf", "jar xf", "javap", ".m2/repository", "unzip ")
+
+
+def _slug(name):
+    """A stable, column-friendly metric suffix from a rubric section title,
+    e.g. 'Layout (wide viewport)' -> 'layout_wide_viewport'."""
+    s = re.sub(r"[^a-z0-9]+", "_", (name or "").lower()).strip("_")
+    return s or "section"
+
+
+def _trace_metrics(context):
+    """Behavioural-trace metrics for the SOLVER, read straight from the row's
+    provider-response metadata.
+
+    promptfoo's agentic providers (anthropic:claude-code, openai:codex) attach
+    skillCalls / toolCalls / numTurns / durationMs / modelUsage / permissionDenials
+    to the response metadata, and the Python-assertion context exposes it as
+    `context['metadata']` (a.k.a. context['providerResponse']['metadata']). So we
+    get the trace WITHOUT needing the solver's stream-json transcript
+    (agent.log.jsonl) — the native providers don't write one into the workspace.
+
+    Returns a dict of metric_name -> number (becomes promptfoo namedScores /
+    columns). Degrades to {} for a provider that exposes no such metadata.
+
+    NB: this is the SOLVER's trace. The agentic verifier this grader spawns runs
+    as a subprocess, invisible to promptfoo, so its tool calls are not counted
+    here (nor is its cost — see the cost note in the eval README).
+    """
+    ctx = context or {}
+    meta = ctx.get("metadata") or (ctx.get("providerResponse") or {}).get("metadata") or {}
+    if not isinstance(meta, dict) or not meta:
+        return {}
+
+    tool_calls = meta.get("toolCalls") or []
+    skill_calls = meta.get("skillCalls") or []
+
+    def _name(t):
+        return str((t or {}).get("name") or "")
+
+    mcp = [t for t in tool_calls if _name(t).startswith("mcp__")]
+    errored = [t for t in tool_calls if (t or {}).get("is_error")]
+    archaeology = 0
+    for t in tool_calls:
+        if _name(t) == "Bash":
+            cmd = ((t.get("input") or {}).get("command") or "") if isinstance(t.get("input"), dict) else ""
+            if any(h in cmd for h in _ARCHAEOLOGY_HINTS):
+                archaeology += 1
+
+    out = {
+        "skill_calls": float(len(skill_calls)),
+        "mcp_calls": float(len(mcp)),
+        "tool_calls": float(len(tool_calls)),
+        "tool_errors": float(len(errored)),
+        "api_archaeology_calls": float(archaeology),
+    }
+    if isinstance(meta.get("numTurns"), (int, float)):
+        out["num_turns"] = float(meta["numTurns"])
+    if isinstance(meta.get("durationMs"), (int, float)):
+        out["solve_seconds"] = round(meta["durationMs"] / 1000.0, 1)
+    denials = meta.get("permissionDenials") or []
+    if denials:
+        out["permission_denials"] = float(len(denials))
+
+    # Real token throughput. promptfoo's top-level token columns capture only
+    # input+output and DROP cache_read / cache_creation — which dominate agentic
+    # runs (e.g. 3.1M cache-read vs 65 input). modelUsage keeps the full picture.
+    mu = meta.get("modelUsage") or {}
+    cache_read = output_tok = 0
+    for m in (mu.values() if isinstance(mu, dict) else []):
+        if not isinstance(m, dict):
+            continue
+        cache_read += (m.get("cacheReadInputTokens") or m.get("cache_read_input_tokens") or 0)
+        output_tok += (m.get("outputTokens") or m.get("output_tokens") or 0)
+    if cache_read:
+        out["cache_read_ktokens"] = round(cache_read / 1000.0, 1)
+    if output_tok:
+        out["output_tokens"] = float(output_tok)
+    return out
 
 
 def _agent_from_provider(context):
@@ -195,17 +278,37 @@ def get_assert(output, context=None):
     total = 0
     max_total = 0
     lines = []
+    named = {}
     for sec in verdict.get("criteria", []):
         s = sec.get("score", 0) or 0
         m = sec.get("max-score", 0) or 0
         total += s
         max_total += m
         lines.append("  {}: {}/{}".format(sec.get("section", "?"), s, m))
+        # Per-section rubric fraction as its own column (rubric_<section>).
+        if m:
+            named["rubric_" + _slug(sec.get("section"))] = round(s / m, 4)
 
     score = (total / max_total) if max_total else 0.0
-    return {
+
+    # Behavioural-trace columns (skills/MCP/backtracks/archaeology/tokens). These
+    # are diagnostics, NOT part of pass/fail — the returned `score` (rubric
+    # fraction) and the threshold are unchanged. namedScores normalization
+    # divides out this assertion's weight, so the raw values display per row.
+    trace = _trace_metrics(context)
+    named.update(trace)
+
+    reason = "Rubric verifier: {}/{} ({:.0%}); floor = {:.0%}\n".format(
+        total, max_total, score, _PASS_THRESHOLD) + "\n".join(lines)
+    if trace:
+        reason += "\n\nSolver trace: " + ", ".join(
+            "{}={:g}".format(k, v) for k, v in sorted(trace.items()))
+
+    result = {
         "pass": bool(score >= _PASS_THRESHOLD),
         "score": score,
-        "reason": "Rubric verifier: {}/{} ({:.0%}); floor = {:.0%}\n".format(
-            total, max_total, score, _PASS_THRESHOLD) + "\n".join(lines),
+        "reason": reason,
     }
+    if named:
+        result["namedScores"] = named
+    return result
