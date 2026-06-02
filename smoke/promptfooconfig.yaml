@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+#
+# AUTH SMOKE TEST — quickly confirm Claude works for BOTH paths the basic_layout
+# benchmark needs, with no Maven / server / Playwright (runs in well under a minute):
+#
+#   1. EVAL / solver  → the agentic `anthropic:claude-code` provider answers a
+#                       trivial prompt. Authenticates via your default Claude Code
+#                       login (on macOS, the Keychain). No token needed.
+#   2. VERIFICATION   → verify_auth.py shells out to `claude` with an ISOLATED
+#                       CLAUDE_CONFIG_DIR, exactly like basic_layout/grade_rubric.py.
+#                       On macOS that can't read the Keychain, so it needs a
+#                       run-scoped CLAUDE_CODE_OAUTH_TOKEN.
+#
+# Run it:  bash smoke/run.sh          (injects the run-scoped token — see README.md)
+# Expect:  token present → BOTH assertions PASS.
+#          no token      → solver PASSES, verification FAILS (with a clear reason).
+
+description: "Claude auth smoke test — eval (solver) + verification paths"
+
+prompts:
+  - "Reply with exactly this and nothing else: SOLVER_OK"
+
+providers:
+  - id: anthropic:claude-code
+    label: claude
+    config:
+      apiKeyRequired: false          # reuse your Claude Code login (Keychain) — no API key
+      model: claude-opus-4-8         # pin for reproducibility
+      working_dir: scratch           # empty scratch dir; the task is text-only
+      permission_mode: bypassPermissions
+      allow_dangerously_skip_permissions: true
+      allow_all_tools: true
+      setting_sources: []            # ignore personal settings/plugins → clean test
+
+tests:
+  - description: "Claude solver + verifier authenticate"
+    assert:
+      # (1) EVAL / solver auth: the agentic provider authenticated and replied.
+      - type: contains
+        value: "SOLVER_OK"
+      # (2) VERIFICATION auth: isolated-config `claude` authenticates (needs token).
+      - type: python
+        value: file://verify_auth.py
