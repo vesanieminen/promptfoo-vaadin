@@ -56,9 +56,12 @@ prompts:
 
 # ---------------------------------------------------------------------------
 # PROVIDERS — the two SOLVERS, as promptfoo's native agentic providers. Config
-# is operational only (working dir, full file/command access, MCP, auth); there
-# is deliberately NO model/effort/temperature tuning. Both authenticate via a
-# subscription, not an API key:
+# is operational (working dir, full file/command access, MCP, auth) plus a PINNED
+# model per provider — Claude on claude-opus-4-8, Codex on gpt-5.5 (in its id).
+# The model is pinned for reproducibility, NOT perf-tuned: without it the
+# claude-code provider would run on the ambient default model (varies by
+# machine/login). There is still no effort/temperature tuning. Both authenticate
+# via a subscription, not an API key:
 #   • Codex  → built-in Codex provider; reuses the `codex login` (ChatGPT) state
 #     when OPENAI_API_KEY / CODEX_API_KEY are unset.
 #   • Claude → built-in Claude Code (agentic) provider; `apiKeyRequired: false`
@@ -76,24 +79,31 @@ providers:
       working_dir: workspaces/codex     # resolved relative to this config's dir
       sandbox_mode: danger-full-access  # solving = write files, run mvn, start a server
       skip_git_repo_check: true
-      cli_config:                       # Codex has no first-class mcp key; MCP goes via cli_config
+      # Vaadin skills: seed.js installs agent-skills' `skills/` into this
+      # workspace's `.agents/skills/` — Codex's own skill-discovery location — so
+      # Codex solves WITH the same Vaadin guidance the Claude row gets from the
+      # plugin (parity). promptfoo auto-detects their use into metadata.skillCalls.
+      cli_config:                       # Codex has no first-class mcp/plugin key; config goes via cli_config
         mcp_servers:
           playwright:
             command: npx
             args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated"]
+          vaadin:                       # the Vaadin docs MCP the agent-skills plugin bundles (parity with Claude)
+            url: "https://mcp.vaadin.com/docs"
 
   - id: anthropic:claude-code           # = anthropic:claude-agent-sdk (the agentic Claude Code provider)
     label: claude
     config:
       apiKeyRequired: false             # Claude subscription via CLAUDE_CODE_OAUTH_TOKEN, no API key
+      model: claude-opus-4-8            # PINNED for reproducibility — without it the provider uses the ambient default model (which varies by machine/login)
       working_dir: workspaces/claude
       permission_mode: bypassPermissions
       allow_dangerously_skip_permissions: true
       allow_all_tools: true
       setting_sources: []               # ignore the user's personal settings/plugins → clean benchmark
-      plugins:                          # the Vaadin Claude plugin (layouts, responsive-layouts, …)
+      plugins:                          # the Vaadin agent-skills plugin (vaadin-skills: layouts, responsive-layouts, …; bundles the Vaadin docs MCP)
         - type: local
-          path: ../../agentic-dx-improvement/claude-plugin
+          path: ../../agentic-dx-improvement/agent-skills
       mcp:
         servers:
           - name: playwright

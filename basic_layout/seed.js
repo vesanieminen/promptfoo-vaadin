@@ -33,6 +33,10 @@ const BENCH_CLAUDE_HOME =
 const PROBLEM_DIR = path.join(AGENTIC_DX_DIR, 'problems', PROBLEM);
 const SKELETON_DIR = path.join(AGENTIC_DX_DIR, 'skeletons', TECHSTACK);
 const BASE_PROMPT_FILE = path.join(AGENTIC_DX_DIR, 'problems', `base_prompt_${TECHSTACK}.md`);
+// The agent-skills plugin's skills/ dir. The Claude provider loads agent-skills
+// as a plugin; Codex has no plugin loader, so we install these skills into the
+// Codex workspace's `.agents/skills/` (Codex's own discovery location) for parity.
+const SKILLS_DIR = path.join(AGENTIC_DX_DIR, 'agent-skills', 'skills');
 
 // One workspace per solver provider, each on a dedicated port. The matching
 // provider `working_dir` and the graders' provider->workspace map use the same
@@ -83,8 +87,39 @@ function seedWorkspace(agent, port) {
     CWD_PREAMBLE + fs.readFileSync(BASE_PROMPT_FILE, 'utf8'),
   );
 
-  // Isolated Claude home for THIS workspace's rubric verifier.
+  // Isolated Claude home for THIS workspace's rubric verifier (needed for BOTH
+  // rows — the verifier is always Claude, even when grading Codex's solution).
   buildClaudeHome(ws);
+
+  // Codex has no plugin loader, so the agent-skills plugin can't deliver the
+  // Vaadin skills the way it does for the Claude row. Install them into Codex's
+  // own discovery location instead, for an apples-to-apples comparison.
+  if (agent === 'codex') seedCodexSkills(ws);
+}
+
+// Point the Codex workspace's `.agents/skills/` at agent-skills' skills/ via a
+// symlink. Codex discovers skills from `<workingDir>/.agents/skills/<name>/SKILL.md`
+// (alongside $CODEX_HOME/skills and ~/.codex/skills); promptfoo recognises the
+// same prefix, so their use is auto-counted into metadata.skillCalls (→ the
+// `skill_calls` column). A symlink (vs a copy) means edits to the submodule are
+// always reflected without re-seeding.
+//   Caveat: skill_calls detection matches the `.agents/skills/<name>/SKILL.md`
+//   path. If Codex canonicalises the symlink when it reports a tool command, the
+//   reported path resolves outside `.agents/`, which would under-count
+//   skill_calls — the skills still load and work, only the metric is affected.
+//   Switch back to `fs.cpSync(SKILLS_DIR, dest, { recursive: true })` if so.
+function seedCodexSkills(ws) {
+  if (!fs.existsSync(SKILLS_DIR)) {
+    console.error(
+      `[seed] agent-skills skills/ not found at ${SKILLS_DIR} — ` +
+        `Codex will solve WITHOUT the Vaadin skills (set AGENTIC_DX_DIR / update the submodule)`,
+    );
+    return;
+  }
+  const dest = path.join(ws, '.agents', 'skills');
+  fs.mkdirSync(path.dirname(dest), { recursive: true }); // the `.agents` parent
+  rmrf(dest); // workspace is fresh, but stay idempotent
+  fs.symlinkSync(SKILLS_DIR, dest, 'dir'); // SKILLS_DIR is absolute
 }
 
 // Mirrors the old claude-home.sh: copy the bench home (Vaadin plugin + base
