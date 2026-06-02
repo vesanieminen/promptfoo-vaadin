@@ -156,8 +156,10 @@ From the **repo root** (the providers' `working_dir` and the `file://` grader pa
 resolve relative to this config's directory):
 
 ```bash
-# Needed for both the Claude solver and the Claude grader:
-export CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"
+# Auth: both the Claude solver and grader use your interactive Claude Code login
+# (run `claude /login` once) — no token export needed. Set a token ONLY for
+# headless/CI where no interactive login is available:
+#   export CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"
 
 # Warm the Maven cache ONCE first (shared ~/.m2 is the one un-isolated resource —
 # concurrent cold downloads can race). Skip if you've built this skeleton before:
@@ -199,7 +201,7 @@ randomness):
 | `BENCH_CLAUDE_HOME` | `$AGENTIC_DX_DIR/.bench-claude-home` | Source Claude home (Playwright MCP) `seed.js` copies per-workspace for the verifier |
 | `RUBRIC_PASS_THRESHOLD` | `0.6` | Floor (fraction of max) for the rubric assertion to pass |
 | `VERIFIER_CMD` | _(unset)_ | Override the grader command (e.g. point at Docker `verify_task.sh`) |
-| `CLAUDE_CODE_OAUTH_TOKEN` | _(required)_ | Subscription auth for the Claude solver + grader |
+| `CLAUDE_CODE_OAUTH_TOKEN` | _(optional)_ | Subscription auth for headless/CI only; otherwise both solver + grader use the interactive `claude /login` |
 
 ## Note
 
