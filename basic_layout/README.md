@@ -130,13 +130,21 @@ result it wraps):
   npm install   # installs @anthropic-ai/claude-agent-sdk + @openai/codex-sdk (see package.json)
   ```
 - **Codex CLI** signed in (`codex login`) — the Codex solver.
-- **Claude CLI** signed in. Auth: the Claude provider has `apiKeyRequired: false`
-  and reuses the ambient Claude Code login, so it works **without**
-  `CLAUDE_CODE_OAUTH_TOKEN` being exported (verified). Set the token only if the
-  ambient login isn't available (e.g. headless/CI). The grader (`grade_rubric.py`)
-  shells out to `claude`, which uses the same login. The bench Claude home
-  `.bench-claude-home` must be present (the Playwright MCP source `seed.js` copies
-  for the verifier).
+- **Claude CLI** signed in (`claude /login`). Auth splits in two:
+  - **Solver** — the `anthropic:claude-code` provider (`apiKeyRequired: false`)
+    reuses your *default* Claude Code login (on macOS, the Keychain). No token
+    needed.
+  - **Rubric verifier** — `grade_rubric.py` shells out to `claude` with an
+    *isolated* `CLAUDE_CONFIG_DIR` (each workspace's `.claude-home`, for
+    concurrent-run isolation). On macOS a non-default `CLAUDE_CONFIG_DIR` does
+    **not** read the Keychain login, so the verifier needs
+    `CLAUDE_CODE_OAUTH_TOKEN`. Without it the rubric assertion scores 0
+    (*"Verifier did not produce verify-result.json"*) while the solver still
+    succeeds. Provide the token **run-scoped** via `basic_layout/run.sh` (below) —
+    not your rc files.
+
+  The bench Claude home `.bench-claude-home` must be present (the Playwright MCP
+  source `seed.js` copies per-workspace for the verifier).
 - JDK 25 + Maven on `PATH`, Node 20.20+/22.22+, and network access (Maven
   downloads, browser).
 
@@ -156,19 +164,23 @@ From the **repo root** (the providers' `working_dir` and the `file://` grader pa
 resolve relative to this config's directory):
 
 ```bash
-# Auth: both the Claude solver and grader use your interactive Claude Code login
-# (run `claude /login` once) — no token export needed. Set a token ONLY for
-# headless/CI where no interactive login is available:
-#   export CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"
+# RECOMMENDED — the wrapper warms the Maven cache, runs with --no-cache, and
+# injects CLAUDE_CODE_OAUTH_TOKEN into the bench PROCESS ONLY (the rubric verifier
+# needs it; see Prerequisites). Token source: $CLAUDE_CODE_OAUTH_TOKEN, else
+# basic_layout/.bench-token (gitignored), else minted interactively. Never touches
+# your rc files.
+bash basic_layout/run.sh
+npx promptfoo@latest view      # side-by-side: codex vs claude, with rubric scores
+```
 
-# Warm the Maven cache ONCE first (shared ~/.m2 is the one un-isolated resource —
-# concurrent cold downloads can race). Skip if you've built this skeleton before:
-( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline )
+Manual equivalent (token still run-scoped — this shell only, not your rc):
 
+```bash
+export CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"   # verifier auth, this shell only
+( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline )  # warm ~/.m2 once
 # --no-cache is REQUIRED: the agentic providers cache by prompt, so without it a
 # second run returns the first run's agent output instead of actually solving.
 npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 2 --no-cache
-npx promptfoo@latest view      # side-by-side: codex vs claude, with rubric scores
 ```
 
 `--max-concurrency 2` runs **Codex and Claude at the same time**; this is safe
@@ -201,7 +213,7 @@ randomness):
 | `BENCH_CLAUDE_HOME` | `$AGENTIC_DX_DIR/.bench-claude-home` | Source Claude home (Playwright MCP) `seed.js` copies per-workspace for the verifier |
 | `RUBRIC_PASS_THRESHOLD` | `0.6` | Floor (fraction of max) for the rubric assertion to pass |
 | `VERIFIER_CMD` | _(unset)_ | Override the grader command (e.g. point at Docker `verify_task.sh`) |
-| `CLAUDE_CODE_OAUTH_TOKEN` | _(optional)_ | Subscription auth for headless/CI only; otherwise both solver + grader use the interactive `claude /login` |
+| `CLAUDE_CODE_OAUTH_TOKEN` | _(required for the verifier on macOS)_ | Subscription auth the rubric verifier needs — its isolated `CLAUDE_CONFIG_DIR` can't read the Keychain login. The solver works without it. Inject run-scoped via `run.sh` (or `basic_layout/.bench-token`), not your rc files. |
 
 ## Note
 
