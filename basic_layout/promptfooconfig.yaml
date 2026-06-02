@@ -10,9 +10,11 @@
 # custom code is seed.js (seeds the workspaces) and the two Python graders.
 #
 # Run from the repo root, with caching OFF so each solve actually executes:
-#   export CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"   # Claude solver + grader
 #   npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 2 --no-cache
 #   npx promptfoo@latest view
+#
+# Auth: the Claude solver + grader use your interactive `claude /login` — no token
+# needed. Set CLAUDE_CODE_OAUTH_TOKEN only for headless/CI (no interactive login).
 #
 # See basic_layout/README.md for prerequisites and what was intentionally skipped.
 
@@ -94,7 +96,7 @@ providers:
   - id: anthropic:claude-code           # = anthropic:claude-agent-sdk (the agentic Claude Code provider)
     label: claude
     config:
-      apiKeyRequired: false             # Claude subscription via CLAUDE_CODE_OAUTH_TOKEN, no API key
+      apiKeyRequired: false             # Claude subscription via interactive `claude /login` (or CLAUDE_CODE_OAUTH_TOKEN for headless/CI), no API key
       model: claude-opus-4-8            # PINNED for reproducibility — without it the provider uses the ambient default model (which varies by machine/login)
       working_dir: workspaces/claude
       permission_mode: bypassPermissions
