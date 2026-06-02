@@ -64,7 +64,29 @@ LAST_MSG="$WORKSPACE/codex-last-message.txt"
 CODEX_MODEL_ARGS=()
 if [ -n "${CODEX_MODEL:-}" ]; then CODEX_MODEL_ARGS=(-c "model=\"$CODEX_MODEL\""); fi
 
-codex exec \
+# The solver may background a dev server (dev.sh / mvn spring-boot:run) to preview
+# its work with Playwright. If that outlives codex it keeps port 8080 bound and the
+# grader's run.sh can't start. So run codex as its own process-group leader and reap
+# the whole group on exit; free port 8080 as a backstop. Mirrors run_task_local.sh.
+CODEX_PGID=""
+cleanup() {
+    if [ -n "$CODEX_PGID" ]; then
+        kill -TERM "-$CODEX_PGID" 2>/dev/null || true
+        sleep 1
+        kill -KILL "-$CODEX_PGID" 2>/dev/null || true
+    fi
+    # Backstop: free port 8080 if a dev server escaped the process group. This
+    # runs at solver exit, before grading starts, so it can't hit the grader.
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -ti tcp:8080 2>/dev/null | xargs kill 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT
+
+# python wrapper puts codex in a fresh process group (macOS has no setsid).
+SETPGRP='import os, sys; os.setpgrp(); os.execvp(sys.argv[1], sys.argv[1:])'
+python3 -c "$SETPGRP" \
+    codex exec \
     --skip-git-repo-check \
     --dangerously-bypass-approvals-and-sandbox \
     --ephemeral \
@@ -73,7 +95,10 @@ codex exec \
     -c model_reasoning_effort="$CODEX_EFFORT" \
     ${CODEX_MODEL_ARGS[@]+"${CODEX_MODEL_ARGS[@]}"} \
     -o "$LAST_MSG" \
-    "$PROMPT" 1>&2
+    "$PROMPT" 1>&2 &
+CODEX_PID=$!
+CODEX_PGID=$CODEX_PID   # codex is the group leader, so pgid == pid
+wait "$CODEX_PID" || true
 
 # --- Emit the result for the graders (stdout = promptfoo output) -----------
 python3 - "$WORKSPACE" "$LAST_MSG" <<'PY'

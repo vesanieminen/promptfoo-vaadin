@@ -28,8 +28,10 @@ the existing **Claude + Playwright** verifier grades it.
   grader run on the host (the harness's local runner already does this).
 - **Keychain / credential plumbing** — `codex` uses its own `codex login`; the
   Claude verifier uses `CLAUDE_CODE_OAUTH_TOKEN` / its config dir.
-- **`format_stream.py` cost/token summary + watchdog** — promptfoo tracks cost and
-  manages process lifecycle itself.
+- **`format_stream.py` cost/token summary** — promptfoo tracks cost itself. (The
+  watchdog's *intent* is kept: `solve.sh` runs Codex as its own process group and
+  reaps it — and frees port 8080 — on exit, so a backgrounded dev server can't
+  block the grader's `run.sh`.)
 - **`agent-time-breakdown.json` telemetry** — the verifier still produces it (it's
   in `verify_prompt.md`); it's preserved in the workspace as an artifact but is
   **not** part of the promptfoo pass/fail. Per
