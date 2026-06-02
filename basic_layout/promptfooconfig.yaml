@@ -4,14 +4,14 @@
 # harness. One agentic task: Codex solves the Vaadin layout task starting from
 # the Vaadin skeleton, then the solution is graded against rubric.md.
 #
-# Run from the repo root:
-#   AGENTIC_DX_DIR=../agentic-dx-improvement \
-#     npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 1
+# Run from the repo root (--max-concurrency 1 is REQUIRED here — see PROVIDERS):
+#   export CLAUDE_CODE_OAUTH_TOKEN="$(claude setup-token)"   # Claude solver + grader
+#   npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 1
 #   npx promptfoo@latest view
 #
 # See basic_layout/README.md for prerequisites, env vars, and what was skipped.
 
-description: "agentic-dx basic_layout — Codex solves the Vaadin layout task, graded by the rubric verifier"
+description: "agentic-dx basic_layout — Codex vs Claude solve the Vaadin layout task, both graded by the rubric verifier"
 
 # ---------------------------------------------------------------------------
 # PROMPT — this is base_prompt_vaadin.md with the "task is in the cwd" preamble
@@ -37,14 +37,21 @@ prompts:
       - Use browser_snapshot / DOM queries for behavior verification; reserve screenshots for layout/visual rubric items.
 
 # ---------------------------------------------------------------------------
-# PROVIDER — the SOLVER. solve.sh seeds a fresh writable workspace from the
-# skeleton + problem files (stripping rubric.md) and runs the Codex CLI in it,
-# then prints {workspace, app, final} JSON. That JSON is the provider output the
-# graders below consume. Path is relative to the repo root (run promptfoo there).
+# PROVIDERS — the SOLVERS being compared. Each wrapper sets SOLVER_AGENT and runs
+# solve.sh, which seeds a fresh writable workspace from the skeleton + problem
+# files (stripping rubric.md), runs its agent in it, and prints {workspace, app,
+# final} JSON — the provider output the graders below consume. Paths are relative
+# to the repo root (run promptfoo there).
+#
+# 2 providers x 1 test = 2 runs. Each solver builds the app and may start a dev
+# server on port 8080, so the two MUST NOT run at once: always pass
+# `--max-concurrency 1` to serialize them (Codex run, then Claude run).
 # ---------------------------------------------------------------------------
 providers:
-  - id: "exec: bash basic_layout/solve.sh"
-    label: "codex (vaadin/basic_layout)"
+  - id: "exec: bash basic_layout/solve-codex.sh"
+    label: "codex (solver)"
+  - id: "exec: bash basic_layout/solve-claude.sh"
+    label: "claude (solver)"
 
 # ---------------------------------------------------------------------------
 # TEST — a single agentic task (no per-case vars). Two graders:
