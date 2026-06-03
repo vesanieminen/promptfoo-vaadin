@@ -35,6 +35,7 @@ Env:
 """
 
 import base64
+import html
 import json
 import os
 import re
@@ -53,24 +54,54 @@ _PASS_THRESHOLD = float(os.environ.get("RUBRIC_PASS_THRESHOLD", "0.6"))
 # Reference images seeded from the problem dir — exclude from the embedded set.
 _REFERENCE_IMAGES = {"Basic layout.png", "Basic layout (mobile).png"}
 
+# The headless verifier's stdout+stderr (stream-json) is captured here, in the
+# workspace, so a silent abort (process exits mid-inspection without writing
+# verify-result.json) leaves a diagnosable trail instead of a bare score-0.
+_VERIFIER_LOG = "verifier-cli.log"
 
-def _workspace_screenshots(workspace):
-    """Markdown data-URI image tags for PNGs the verifier left in the workspace
-    root (e.g. wide/narrow viewport captures), excluding the seeded reference
-    images. Embedded into the rubric assertion's reason so they surface in
-    `promptfoo view`. Unlike grade_static, this runs AFTER the verifier, so the
-    screenshots actually exist by the time it reads the workspace."""
-    imgs = []
-    for name in sorted(os.listdir(workspace)) if os.path.isdir(workspace) else []:
-        if not name.lower().endswith(".png") or name in _REFERENCE_IMAGES:
-            continue
+
+def _write_screenshot_gallery(workspace, out_name, title):
+    """Write a self-contained HTML gallery of the workspace's non-reference PNGs
+    (each embedded as a data URI) and return (abs_path, count); (None, 0) if none.
+
+    We do NOT embed the screenshots into the assertion `reason`: promptfoo's
+    viewer renders the reason as PLAIN TEXT (whitespace-pre-wrap), not markdown,
+    so data-URI <img> tags there show up as an unreadable base64 wall instead of
+    images. Instead we drop a standalone gallery next to the captures, openable
+    straight from disk (file://) — the reason just carries a path pointer.
+    """
+    if not os.path.isdir(workspace):
+        return None, 0
+    names = [n for n in sorted(os.listdir(workspace))
+             if n.lower().endswith(".png") and n not in _REFERENCE_IMAGES]
+    if not names:
+        return None, 0
+    parts = [
+        "<!doctype html><html><head><meta charset=\"utf-8\">",
+        "<title>{}</title>".format(html.escape(title)),
+        "<style>body{font-family:system-ui,-apple-system,sans-serif;margin:24px;"
+        "background:#111;color:#eee}figure{margin:0 0 28px}figcaption{font:13px "
+        "ui-monospace,monospace;margin-bottom:6px;color:#9cf}img{max-width:100%;"
+        "height:auto;border:1px solid #333;background:#fff}</style></head><body>",
+        "<h1>{}</h1>".format(html.escape(title)),
+    ]
+    for name in names:
         try:
             with open(os.path.join(workspace, name), "rb") as f:
                 b64 = base64.b64encode(f.read()).decode()
-            imgs.append("![{}](data:image/png;base64,{})".format(name, b64))
         except Exception:
-            pass
-    return "\n\n".join(imgs)
+            continue
+        parts.append('<figure><figcaption>{n}</figcaption>'
+                     '<img alt="{n}" src="data:image/png;base64,{b}"></figure>'
+                     .format(n=html.escape(name), b=b64))
+    parts.append("</body></html>")
+    out_path = os.path.join(workspace, out_name)
+    try:
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(parts))
+    except Exception:
+        return None, 0
+    return out_path, len(names)
 
 # Bash command fragments that signal "Vaadin API archaeology" — the agent
 # digging through jars / decompiling / spelunking the local Maven cache because
@@ -249,9 +280,6 @@ def _run_verifier(workspace):
     env["PORT"] = str(port)
     env["CLAUDE_CONFIG_DIR"] = _claude_home(workspace)
 
-    # Clear any dev server the solver left bound to this run's port before run.sh.
-    _free_port(port)
-
     verifier_cmd = os.environ.get("VERIFIER_CMD")
     if verifier_cmd:
         cmd = ["bash", "-lc", verifier_cmd]
@@ -263,16 +291,41 @@ def _run_verifier(workspace):
             "-p", verify_prompt,
         ]
 
-    # Own session/group so we can reap a lingering app server afterwards.
-    proc = subprocess.Popen(cmd, cwd=workspace, env=env, start_new_session=True)
-    try:
-        proc.wait()
-    finally:
-        try:
-            os.killpg(proc.pid, signal.SIGTERM)
-        except Exception:
-            pass
+    # The headless verifier can abort mid-inspection (e.g. its Playwright MCP /
+    # browser falls over under concurrent load) and exit WITHOUT writing
+    # verify-result.json — a silent failure that scored 0 with no diagnostics. So:
+    #   (1) capture its stream-json stdout+stderr to _VERIFIER_LOG in the workspace,
+    #   (2) bound each attempt with a timeout so a hang can't wedge the whole eval,
+    #   (3) retry if the verdict file is still missing (default: one retry).
+    attempts = max(1, int(os.environ.get("VERIFIER_RETRIES", "1")) + 1)
+    timeout_s = float(os.environ.get("VERIFIER_TIMEOUT_S", "1800"))
+    log_path = os.path.join(workspace, _VERIFIER_LOG)
+
+    for attempt in range(1, attempts + 1):
+        # Clear any server bound to this run's port before run.sh (re)builds.
         _free_port(port)
+        with open(log_path, "ab") as logf:
+            logf.write("\n===== verifier attempt {}/{} (timeout {:g}s) =====\n"
+                       .format(attempt, attempts, timeout_s).encode())
+            logf.flush()
+            # Own session/group so we can reap a lingering app server afterwards.
+            proc = subprocess.Popen(cmd, cwd=workspace, env=env,
+                                    stdout=logf, stderr=subprocess.STDOUT,
+                                    start_new_session=True)
+            try:
+                proc.wait(timeout=timeout_s)
+            except subprocess.TimeoutExpired:
+                logf.write("\n[grade_rubric] attempt {} exceeded {:g}s; killing.\n"
+                           .format(attempt, timeout_s).encode())
+            finally:
+                try:
+                    os.killpg(proc.pid, signal.SIGTERM)
+                except Exception:
+                    pass
+                _free_port(port)
+        if os.path.isfile(result_path):
+            return result_path
+        # Verdict still missing — retry while attempts remain.
     return result_path
 
 
@@ -287,9 +340,11 @@ def get_assert(output, context=None):
     result_path = _run_verifier(workspace)
     if not result_path or not os.path.isfile(result_path):
         return {"pass": False, "score": 0.0,
-                "reason": "Verifier did not produce verify-result.json in {}. "
-                          "Check the verifier CLI/auth and that app/run.sh "
-                          "builds.".format(workspace)}
+                "reason": "Verifier did not produce verify-result.json in {ws} "
+                          "(after retries). Inspect {log} for the verifier's "
+                          "stream-json output to see where it aborted; also check "
+                          "the verifier CLI/auth and that app/run.sh builds.".format(
+                              ws=workspace, log=os.path.join(workspace, _VERIFIER_LOG))}
 
     try:
         with open(result_path, encoding="utf-8") as f:
@@ -327,9 +382,13 @@ def get_assert(output, context=None):
         reason += "\n\nSolver trace: " + ", ".join(
             "{}={:g}".format(k, v) for k, v in sorted(trace.items()))
 
-    shots = _workspace_screenshots(workspace)
-    if shots:
-        reason += "\n\n### Screenshots\n\n" + shots
+    gallery, n_shots = _write_screenshot_gallery(
+        workspace, "verify-screenshots.html",
+        "{} — basic_layout verifier screenshots".format(os.path.basename(workspace)))
+    if gallery:
+        reason += ("\n\nScreenshots: {} viewport capture(s) — open in a browser "
+                   "(promptfoo shows reasons as plain text, not images):\n  "
+                   "{}".format(n_shots, gallery))
 
     result = {
         "pass": bool(score >= _PASS_THRESHOLD),
