@@ -17,6 +17,7 @@ not a workspace path.
 
 import base64
 import glob
+import html
 import os
 import re
 
@@ -24,6 +25,24 @@ _HERE = os.path.dirname(os.path.abspath(__file__))  # promptfoo/basic_layout
 
 # Reference images seeded from the problem dir — not solver screenshots.
 _REFERENCE_IMAGES = {"Basic layout.png", "Basic layout (mobile).png"}
+
+
+def _solver_authored(paths):
+    """Drop framework-generated paths from a glob result.
+
+    A Vaadin production build writes scaffolding into src/main/frontend/generated/
+    (routes.tsx, Flow.tsx, vaadin-react.tsx, …) and pulls deps into node_modules.
+    None of it is solver-authored, so the "no React/TSX view files" and
+    "no inline style=" checks must ignore it — otherwise whichever agent happened
+    to build/run the app trips a false FAIL purely from the generated bundle.
+    """
+    out = []
+    for p in paths:
+        parts = p.replace(os.sep, "/").split("/")
+        if "generated" in parts or "node_modules" in parts:
+            continue
+        out.append(p)
+    return out
 
 
 def _agent_from_provider(context):
@@ -48,26 +67,48 @@ def _app_dir(context):
     return os.path.join(_HERE, "workspaces", agent, "app")
 
 
-def _solver_screenshots(context):
-    """Return markdown image tags for PNGs the solver left in the workspace root."""
-    agent = _agent_from_provider(context)
-    if not agent:
-        return ""
-    ws = os.path.join(_HERE, "workspaces", agent)
-    imgs = []
-    for name in sorted(os.listdir(ws)) if os.path.isdir(ws) else []:
-        if not name.lower().endswith(".png"):
-            continue
-        if name in _REFERENCE_IMAGES:
-            continue
-        path = os.path.join(ws, name)
+def _write_screenshot_gallery(workspace, out_name, title):
+    """Write a self-contained HTML gallery of the workspace's non-reference PNGs
+    (each embedded as a data URI) and return (abs_path, count); (None, 0) if none.
+
+    We do NOT embed the screenshots into the assertion `reason`: promptfoo's
+    viewer renders the reason as PLAIN TEXT (whitespace-pre-wrap), not markdown,
+    so data-URI <img> tags there show up as an unreadable base64 wall instead of
+    images. Instead we drop a standalone gallery next to the captures, openable
+    straight from disk (file://) — the reason just carries a path pointer.
+    """
+    if not os.path.isdir(workspace):
+        return None, 0
+    names = [n for n in sorted(os.listdir(workspace))
+             if n.lower().endswith(".png") and n not in _REFERENCE_IMAGES]
+    if not names:
+        return None, 0
+    parts = [
+        "<!doctype html><html><head><meta charset=\"utf-8\">",
+        "<title>{}</title>".format(html.escape(title)),
+        "<style>body{font-family:system-ui,-apple-system,sans-serif;margin:24px;"
+        "background:#111;color:#eee}figure{margin:0 0 28px}figcaption{font:13px "
+        "ui-monospace,monospace;margin-bottom:6px;color:#9cf}img{max-width:100%;"
+        "height:auto;border:1px solid #333;background:#fff}</style></head><body>",
+        "<h1>{}</h1>".format(html.escape(title)),
+    ]
+    for name in names:
         try:
-            with open(path, "rb") as f:
+            with open(os.path.join(workspace, name), "rb") as f:
                 b64 = base64.b64encode(f.read()).decode()
-            imgs.append("![{}](data:image/png;base64,{})".format(name, b64))
         except Exception:
-            pass
-    return "\n\n".join(imgs)
+            continue
+        parts.append('<figure><figcaption>{n}</figcaption>'
+                     '<img alt="{n}" src="data:image/png;base64,{b}"></figure>'
+                     .format(n=html.escape(name), b=b64))
+    parts.append("</body></html>")
+    out_path = os.path.join(workspace, out_name)
+    try:
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(parts))
+    except Exception:
+        return None, 0
+    return out_path, len(names)
 
 
 def get_assert(output, context=None):
@@ -109,10 +150,12 @@ def get_assert(output, context=None):
                    or re.search(r'setAttribute\(\s*"style"', src) is not None)
     chk("no inline styles in Java", not inline_java)
 
-    # No inline style="" in any template/HTML shipped with the app.
+    # No inline style="" in any template/HTML shipped with the app (excluding the
+    # generated bundle, which is framework output, not solver source).
     tmpl_inline = False
     for ext in ("html", "ts", "tsx", "js", "jsx"):
-        for fp in glob.glob(os.path.join(app, "src/main/**/*." + ext), recursive=True):
+        for fp in _solver_authored(
+                glob.glob(os.path.join(app, "src/main/**/*." + ext), recursive=True)):
             try:
                 with open(fp, encoding="utf-8", errors="replace") as f:
                     if re.search(r'style\s*=\s*["\']', f.read()):
@@ -124,8 +167,10 @@ def get_assert(output, context=None):
             break
     chk("no inline style= in templates", not tmpl_inline)
 
-    # Vaadin Flow (Java) only — no React/TSX view files leaked in.
-    tsx = glob.glob(os.path.join(app, "src/main/frontend/**/*.tsx"), recursive=True)
+    # Vaadin Flow (Java) only — no solver-authored React/TSX view files leaked in.
+    # (src/main/frontend/generated/*.tsx is Vaadin's own scaffolding — ignore it.)
+    tsx = _solver_authored(
+        glob.glob(os.path.join(app, "src/main/frontend/**/*.tsx"), recursive=True))
     chk("no React/TSX view files", len(tsx) == 0)
 
     passed = sum(1 for _, ok, _ in checks if ok)
@@ -136,9 +181,14 @@ def get_assert(output, context=None):
     lines = ["{:4}  {}".format("PASS" if ok else "FAIL", name) for name, ok, _ in checks]
     reason = ("Static source checks (Structure & Vaadin-specific) "
               "{}/{} passed:\n".format(passed, total) + "\n".join(lines))
-    screenshots = _solver_screenshots(context)
-    if screenshots:
-        reason += "\n\n" + screenshots
+    workspace = os.path.dirname(app)  # workspaces/<agent>/app -> workspaces/<agent>
+    gallery, n_shots = _write_screenshot_gallery(
+        workspace, "solver-screenshots.html",
+        "{} — basic_layout solver screenshots".format(os.path.basename(workspace)))
+    if gallery:
+        reason += ("\n\nScreenshots: {} solver capture(s) — open in a browser "
+                   "(promptfoo shows reasons as plain text, not images):\n  "
+                   "{}".format(n_shots, gallery))
     return {
         "pass": bool(critical_ok),
         "score": score,
