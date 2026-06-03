@@ -34,6 +34,7 @@ Env:
                         default `claude ...`; runs with cwd=workspace and PORT set.
 """
 
+import base64
 import json
 import os
 import re
@@ -48,6 +49,28 @@ _AGENTIC_DX_DIR = os.environ.get(
 )
 _PROBLEM = os.environ.get("PROBLEM", "basic_layout")
 _PASS_THRESHOLD = float(os.environ.get("RUBRIC_PASS_THRESHOLD", "0.6"))
+
+# Reference images seeded from the problem dir — exclude from the embedded set.
+_REFERENCE_IMAGES = {"Basic layout.png", "Basic layout (mobile).png"}
+
+
+def _workspace_screenshots(workspace):
+    """Markdown data-URI image tags for PNGs the verifier left in the workspace
+    root (e.g. wide/narrow viewport captures), excluding the seeded reference
+    images. Embedded into the rubric assertion's reason so they surface in
+    `promptfoo view`. Unlike grade_static, this runs AFTER the verifier, so the
+    screenshots actually exist by the time it reads the workspace."""
+    imgs = []
+    for name in sorted(os.listdir(workspace)) if os.path.isdir(workspace) else []:
+        if not name.lower().endswith(".png") or name in _REFERENCE_IMAGES:
+            continue
+        try:
+            with open(os.path.join(workspace, name), "rb") as f:
+                b64 = base64.b64encode(f.read()).decode()
+            imgs.append("![{}](data:image/png;base64,{})".format(name, b64))
+        except Exception:
+            pass
+    return "\n\n".join(imgs)
 
 # Bash command fragments that signal "Vaadin API archaeology" — the agent
 # digging through jars / decompiling / spelunking the local Maven cache because
@@ -303,6 +326,10 @@ def get_assert(output, context=None):
     if trace:
         reason += "\n\nSolver trace: " + ", ".join(
             "{}={:g}".format(k, v) for k, v in sorted(trace.items()))
+
+    shots = _workspace_screenshots(workspace)
+    if shots:
+        reason += "\n\n### Screenshots\n\n" + shots
 
     result = {
         "pass": bool(score >= _PASS_THRESHOLD),
