@@ -13,10 +13,13 @@
 #   bash basic_layout/run.sh
 #   npx promptfoo@latest view
 #
-# Auth: the SOLVER uses your `claude /login` (on macOS, the Keychain) — no token.
-# The rubric VERIFIER shells out to `claude` with an ISOLATED CLAUDE_CONFIG_DIR
-# that can't read the macOS Keychain, so it needs CLAUDE_CODE_OAUTH_TOKEN —
-# run.sh injects it into the bench process only (see README), not your rc files.
+# Auth (run.sh handles this): both the SOLVER and the rubric VERIFIER need Claude
+# auth, and on macOS the verifier's ISOLATED CLAUDE_CONFIG_DIR can't read the
+# Keychain login. run.sh resolves ONE run-scoped credential and injects it into the
+# bench process only (never your rc files) — YOUR CHOICE of:
+#   • ANTHROPIC_API_KEY      (sk-ant-api...) → API-key billing (solver + verifier), or
+#   • CLAUDE_CODE_OAUTH_TOKEN (sk-ant-oat...) → Claude subscription billing.
+# See run.sh / README.md.
 #
 # See basic_layout/README.md for prerequisites and what was intentionally skipped.
 
@@ -98,7 +101,7 @@ providers:
   - id: anthropic:claude-code           # = anthropic:claude-agent-sdk (the agentic Claude Code provider)
     label: claude
     config:
-      apiKeyRequired: false             # Claude subscription via interactive `claude /login` (or CLAUDE_CODE_OAUTH_TOKEN for headless/CI), no API key
+      apiKeyRequired: false             # don't force an API key: lets the provider fall back to a subscription (CLAUDE_CODE_OAUTH_TOKEN / `claude /login`) when ANTHROPIC_API_KEY is unset. If run.sh's API-key mode sets ANTHROPIC_API_KEY, the provider still uses it (this flag only gates the no-key error).
       model: claude-opus-4-8            # PINNED for reproducibility — without it the provider uses the ambient default model (which varies by machine/login)
       working_dir: workspaces/claude
       permission_mode: bypassPermissions

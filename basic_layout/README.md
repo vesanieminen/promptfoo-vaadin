@@ -130,18 +130,23 @@ result it wraps):
   npm install   # installs @anthropic-ai/claude-agent-sdk + @openai/codex-sdk (see package.json)
   ```
 - **Codex CLI** signed in (`codex login`) — the Codex solver.
-- **Claude CLI** signed in (`claude /login`). Auth splits in two:
-  - **Solver** — the `anthropic:claude-code` provider (`apiKeyRequired: false`)
-    reuses your *default* Claude Code login (on macOS, the Keychain). No token
-    needed.
-  - **Rubric verifier** — `grade_rubric.py` shells out to `claude` with an
-    *isolated* `CLAUDE_CONFIG_DIR` (each workspace's `.claude-home`, for
-    concurrent-run isolation). On macOS a non-default `CLAUDE_CONFIG_DIR` does
-    **not** read the Keychain login, so the verifier needs
-    `CLAUDE_CODE_OAUTH_TOKEN`. Without it the rubric assertion scores 0
-    (*"Verifier did not produce verify-result.json"*) while the solver still
-    succeeds. Provide the token **run-scoped** via `basic_layout/run.sh` (below) —
-    not your rc files.
+- **Claude auth** — both the solver and the rubric verifier need it, and on macOS
+  the verifier's *isolated* `CLAUDE_CONFIG_DIR` (each workspace's `.claude-home`,
+  for concurrent-run isolation) can **not** read the Keychain login. So
+  `basic_layout/run.sh` resolves **one run-scoped credential** and injects it into
+  the bench process only (not your rc files). **You choose the mode** by which
+  credential you supply:
+  - **Anthropic API key** (`ANTHROPIC_API_KEY=sk-ant-api...`) — bills against the
+    API key; the solver **and** the verifier both use it (it takes precedence over
+    any Keychain login). Get one at <https://console.anthropic.com/>.
+  - **Subscription token** (`CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat...`) — bills against
+    your Claude subscription; mint it with `claude setup-token` (interactive).
+
+  Source order (first hit wins): `$ANTHROPIC_API_KEY`, then
+  `$CLAUDE_CODE_OAUTH_TOKEN`, then `basic_layout/.bench-token` (one line; the mode
+  is auto-detected from its `sk-ant-api` / `sk-ant-oat` prefix). Without any of
+  these the rubric assertion scores 0 (*"Verifier did not produce
+  verify-result.json"*) while the solver may still succeed off your Keychain login.
 
   The bench Claude home `.bench-claude-home` must be present (the Playwright MCP
   source `seed.js` copies per-workspace for the verifier).
@@ -165,22 +170,24 @@ From the **repo root** (the providers' `working_dir` and the `file://` grader pa
 resolve relative to this config's directory):
 
 ```bash
-# RECOMMENDED — the wrapper warms the Maven cache, runs with --no-cache, and
-# injects CLAUDE_CODE_OAUTH_TOKEN into the bench PROCESS ONLY (the rubric verifier
-# needs it; see Prerequisites). Token source: $CLAUDE_CODE_OAUTH_TOKEN, else
-# basic_layout/.bench-token (gitignored), else minted interactively. Never touches
-# your rc files.
+# RECOMMENDED — the wrapper warms the Maven cache, runs with --no-cache, and injects
+# ONE run-scoped Claude credential into the bench PROCESS ONLY (solver + verifier;
+# see Prerequisites). Credential source: $ANTHROPIC_API_KEY, else
+# $CLAUDE_CODE_OAUTH_TOKEN, else basic_layout/.bench-token (gitignored; either kind,
+# detected by prefix). Never touches your rc files.
 bash basic_layout/run.sh
 npx promptfoo@latest view      # side-by-side: codex vs claude, with rubric scores
 ```
 
-Manual equivalent (token still run-scoped — this shell only, not your rc):
+Manual equivalent (credential still run-scoped — this shell only, not your rc):
 
 ```bash
-# Get a token: run `claude setup-token` interactively (it opens a browser) and
-# copy the printed sk-ant-oat01-... value. Do NOT redirect setup-token to a file —
-# its UI prints to stdout, so a redirect captures the whole UI, not just the token.
-export CLAUDE_CODE_OAUTH_TOKEN='sk-ant-oat01-...'   # paste it; this shell only, not your rc
+# Pick ONE auth mode:
+#   API key  → export ANTHROPIC_API_KEY='sk-ant-api03-...'      # from console.anthropic.com
+#   or subscription → `claude setup-token` (interactive; opens a browser), then export
+#   the printed sk-ant-oat01-... value. Do NOT redirect setup-token to a file — its UI
+#   prints to stdout, so a redirect captures the whole UI, not just the token.
+export ANTHROPIC_API_KEY='sk-ant-api03-...'         # OR: export CLAUDE_CODE_OAUTH_TOKEN='sk-ant-oat01-...'
 ( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline )  # warm ~/.m2 once
 # --no-cache is REQUIRED: the agentic providers cache by prompt, so without it a
 # second run returns the first run's agent output instead of actually solving.
@@ -217,7 +224,8 @@ randomness):
 | `BENCH_CLAUDE_HOME` | `$AGENTIC_DX_DIR/.bench-claude-home` | Source Claude home (Playwright MCP) `seed.js` copies per-workspace for the verifier |
 | `RUBRIC_PASS_THRESHOLD` | `0.6` | Floor (fraction of max) for the rubric assertion to pass |
 | `VERIFIER_CMD` | _(unset)_ | Override the grader command (e.g. point at Docker `verify_task.sh`) |
-| `CLAUDE_CODE_OAUTH_TOKEN` | _(required for the verifier on macOS)_ | Subscription auth the rubric verifier needs — its isolated `CLAUDE_CONFIG_DIR` can't read the Keychain login. The solver works without it. Inject run-scoped via `run.sh` (or `basic_layout/.bench-token`), not your rc files. |
+| `ANTHROPIC_API_KEY` | _(one of these two required for the verifier on macOS)_ | **API-key auth mode.** Bills against the API key; both the solver and the rubric verifier use it (precedence over any Keychain login). Inject run-scoped via `run.sh` (env, or an `sk-ant-api...` line in `basic_layout/.bench-token`), not your rc files. |
+| `CLAUDE_CODE_OAUTH_TOKEN` | _(the other option)_ | **Subscription auth mode.** What the rubric verifier needs when not using an API key — its isolated `CLAUDE_CONFIG_DIR` can't read the Keychain login. Inject run-scoped via `run.sh` (env, or an `sk-ant-oat...` line in `basic_layout/.bench-token`), not your rc files. |
 
 ## Note
 
