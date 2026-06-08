@@ -63,6 +63,13 @@ function prepareWorkspace(agent) {
     return;
   }
 
+  // Clear any stale verdict from a prior verify run. grade_verdict.py falls back to
+  // verify-result.json on disk when the provider returns no structured output; if
+  // THIS run's verifier also fails to rewrite it, a leftover file would be read as
+  // this run's verdict. Within run.sh, phase-1 seed.js already wipes the workspace —
+  // this also covers a standalone `eval -c verify.yaml` re-run against old workspaces.
+  fs.rmSync(path.join(ws, 'verify-result.json'), { force: true });
+
   // Restore the rubric the solver never saw, into the verifier's cwd.
   if (fs.existsSync(RUBRIC_SRC)) {
     fs.copyFileSync(RUBRIC_SRC, path.join(ws, 'rubric.md'));

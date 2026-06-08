@@ -6,14 +6,19 @@
 #   1. EVAL / solver  → the agentic `anthropic:claude-code` provider answers a
 #                       trivial prompt. Authenticates via your default Claude Code
 #                       login (on macOS, the Keychain). No token needed.
-#   2. VERIFICATION   → verify_auth.py shells out to `claude` with an ISOLATED
-#                       CLAUDE_CONFIG_DIR, exactly like basic_layout/grade_rubric.py.
-#                       On macOS that can't read the Keychain, so it needs a
-#                       run-scoped CLAUDE_CODE_OAUTH_TOKEN.
+#   2. TOKEN auth     → verify_auth.py shells out to `claude` under an ISOLATED
+#                       CLAUDE_CONFIG_DIR — the strictest case, forcing token-only
+#                       auth (on macOS an isolated config dir can't read the Keychain,
+#                       so it needs a run-scoped CLAUDE_CODE_OAUTH_TOKEN). The
+#                       basic_layout verifier USED to run this way (old
+#                       grade_rubric.py); it's now a provider that can use the
+#                       Keychain, so a token is OPTIONAL — this stays as a defensive
+#                       check of the token path. See docs/ADR-verifier-as-provider.md.
 #
 # Run it:  bash smoke/run.sh          (injects the run-scoped token — see README.md)
 # Expect:  token present → BOTH assertions PASS.
-#          no token      → solver PASSES, verification FAILS (with a clear reason).
+#          no token      → solver PASSES, token-auth check FAILS (with a clear reason;
+#                          the benchmark itself still works via your Keychain login).
 
 description: "Claude auth smoke test — eval (solver) + verification paths"
 

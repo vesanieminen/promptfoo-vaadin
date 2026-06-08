@@ -1,10 +1,16 @@
-"""Smoke assertion: does the agentic VERIFIER's auth path work?
+"""Smoke assertion: does Claude's TOKEN auth path work under an isolated config dir?
 
-The real rubric verifier (basic_layout/grade_rubric.py) runs `claude` with an
-ISOLATED CLAUDE_CONFIG_DIR. On macOS a non-default CLAUDE_CONFIG_DIR does NOT read
-the Keychain login, so the verifier needs CLAUDE_CODE_OAUTH_TOKEN (injected
-run-scoped by run.sh). This reproduces that exact context with a trivial prompt
-and reports whether the isolated-config `claude` authenticated.
+This forces the strictest auth condition — an ISOLATED CLAUDE_CONFIG_DIR. On macOS a
+non-default CLAUDE_CONFIG_DIR does NOT read the Keychain login, so the `claude` here
+must authenticate from CLAUDE_CODE_OAUTH_TOKEN (injected run-scoped by run.sh).
+
+The basic_layout rubric verifier USED to run exactly like this (the old
+grade_rubric.py subprocess). It no longer does: the verifier is now a promptfoo
+provider that reads the Keychain login or an env token, so a token is OPTIONAL for
+the benchmark (see docs/ADR-verifier-as-provider.md). This check is kept as a
+defensive test of the token path itself — relevant for API-key / token billing or a
+login-less CI box. It reproduces the isolated-config context with a trivial prompt
+and reports whether token auth succeeded.
 """
 import os
 import shutil
