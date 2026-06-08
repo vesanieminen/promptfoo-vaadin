@@ -1,13 +1,16 @@
 # yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
 #
 # promptfoo port of the `basic_layout` benchmark from the agentic-dx-improvement
-# harness. Two agents — Codex and Claude — solve the Vaadin layout task starting
-# from the Vaadin skeleton; both solutions are graded against rubric.md.
+# harness. This is PHASE 1 (solve). Three agents — Codex, Claude, and a no-skills
+# Claude baseline — solve the Vaadin layout task starting from the Vaadin
+# skeleton. The rubric is graded in PHASE 2 (verify.yaml), where the verifier is a
+# first-class provider rather than a subprocess — see docs/ADR-verifier-as-provider.md.
 #
 # Unlike the bespoke shell harness, the SOLVERS are promptfoo's BUILT-IN agentic
 # providers (just like the repo-root promptfooconfig.yaml uses native providers),
 # so there is no solve.sh / wrapper scripts and no model env knobs. The only
-# custom code is seed.js (seeds the workspaces) and the two Python graders.
+# custom code is seed.js (seeds the workspaces) and grade_static.py (source gate
+# + solver-trace columns).
 #
 # Run from the repo root via the wrapper (warms Maven, --no-cache, run-scoped auth):
 #   bash basic_layout/run.sh
@@ -27,11 +30,11 @@ description: "agentic-dx basic_layout — Codex vs Claude solve the Vaadin layou
 
 # ---------------------------------------------------------------------------
 # SEED — a beforeAll extension hook that (re)creates one fresh workspace per
-# solver provider (workspaces/codex, workspaces/claude) from the
-# agentic-dx-improvement sources: skeleton + task files, rubric stripped, a
-# per-provider server port baked in, and an isolated Claude home for the
-# verifier. Replaces the seeding half of the old solve.sh + all of claude-home.sh.
-# Override the source location with AGENTIC_DX_DIR (default: sibling checkout).
+# solver provider (workspaces/codex, workspaces/claude, workspaces/claude-no-skills)
+# from the agentic-dx-improvement sources: skeleton + task files, rubric stripped
+# (seed_verify.js restores it for phase 2), and a per-provider server port baked
+# in. Replaces the seeding half of the old solve.sh. Override the source location
+# with AGENTIC_DX_DIR (default: sibling checkout).
 # ---------------------------------------------------------------------------
 extensions:
   - file://seed.js:seed
@@ -74,10 +77,11 @@ prompts:
 #   • Claude → built-in Claude Code (agentic) provider; `apiKeyRequired: false`
 #     reuses CLAUDE_CODE_OAUTH_TOKEN / the Claude Code login.
 #
-# Each runs in its OWN working_dir (seeded above) on its OWN baked port, so the
-# two rows are safe to run together with `--max-concurrency 2`. Playwright is
-# registered per provider as an in-memory (`--isolated`) browser so concurrent
-# solvers don't deadlock on a shared profile lock.
+# Each runs in its OWN working_dir (seeded above) on its OWN baked port (codex
+# 8081, claude 8082, claude-no-skills 8083), so the rows are safe to run together
+# with `--max-concurrency 3`. Playwright is registered per provider as an
+# in-memory (`--isolated`) browser so concurrent solvers don't deadlock on a
+# shared profile lock.
 # ---------------------------------------------------------------------------
 providers:
   - id: openai:codex:gpt-5.5            # model lives in the id, like the root config
@@ -117,24 +121,39 @@ providers:
             command: npx
             args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated"]
 
+  - id: anthropic:claude-code           # BASELINE — same solver as `claude`, MINUS the Vaadin skills
+    label: claude-no-skills
+    config:
+      apiKeyRequired: false
+      model: claude-opus-4-8            # same pin as `claude` so the ONLY difference is the skills
+      working_dir: workspaces/claude-no-skills
+      permission_mode: bypassPermissions
+      allow_dangerously_skip_permissions: true
+      allow_all_tools: true
+      setting_sources: []
+      # NO `plugins:` (no Vaadin agent-skills) and NO Vaadin docs MCP — this row
+      # isolates how much the skills move the rubric (the benchmark's thesis).
+      # Playwright stays so it can self-verify in a browser like the others.
+      mcp:
+        servers:
+          - name: playwright
+            command: npx
+            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated"]
+
 # ---------------------------------------------------------------------------
-# TEST — a single agentic task (no per-case vars). Each grader locates its row's
-# workspace from the provider in `context`. Two graders:
-#   1. grade_static.py  — deterministic source checks (cheap gate): the rubric's
-#      Structure + Vaadin-specific bullets that are verifiable by reading code.
-#   2. grade_rubric.py  — the agentic verifier (verify_prompt.md + rubric.md):
-#      runs the app + Playwright across viewports and returns the /21 (/24) score.
-# file:// paths resolve relative to THIS config's directory.
+# TEST — a single agentic task (no per-case vars). This is PHASE 1 (solve); the
+# rubric verdict is graded in PHASE 2 (verify.yaml), where the verifier is a
+# first-class provider — see docs/ADR-verifier-as-provider.md.
+#
+# grade_static.py is the cheap, deterministic source gate (the rubric's Structure
+# + Vaadin-specific bullets verifiable by reading code) AND it emits the SOLVER's
+# behavioural-trace diagnostic columns (skill_calls, mcp_calls, api_archaeology_
+# calls, num_turns, solve_seconds, cache_read_ktokens, …) read from this row's
+# provider-response metadata. Per ADR 0002 the trace is the real DX signal; it's
+# diagnostic (namedScores), not part of pass/fail. file:// resolves to THIS dir.
 # ---------------------------------------------------------------------------
 tests:
-  - description: "basic_layout implemented from the Vaadin skeleton, graded by the rubric"
+  - description: "basic_layout solved from the Vaadin skeleton (source gate + solver trace; rubric graded in phase 2)"
     assert:
       - type: python
         value: file://grade_static.py
-        weight: 1
-      - type: python
-        value: file://grade_rubric.py
-        weight: 3
-    # ADR 0002: the rubric is a FLOOR, not the target. The weighted score must
-    # clear this floor for the test to pass; tune via env on the graders.
-    threshold: 0.6

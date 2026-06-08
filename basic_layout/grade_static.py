@@ -6,10 +6,17 @@ checks the parts of the rubric verifiable by reading source — the Structure
 section (presence) and the Vaadin-specific section ("verify by reading the
 source — DOM inspection alone is not sufficient").
 
-This is the cheap, reproducible gate. The behavioural / visual rubric bullets
-(alignment, scrolling, viewport behaviour) are graded by grade_rubric.py.
+This is the cheap, reproducible PHASE 1 gate. The behavioural / visual rubric
+bullets (alignment, scrolling, viewport behaviour) are graded in PHASE 2 by the
+verifier provider in verify.yaml (parsed by grade_verdict.py).
 
-Contract: define get_assert(output, context) -> {pass, score, reason}.
+This assertion ALSO emits the SOLVER's behavioural-trace diagnostic columns
+(skill_calls, mcp_calls, api_archaeology_calls, num_turns, solve_seconds,
+cache_read_ktokens, …) as namedScores, read from this row's provider-response
+metadata. They're diagnostics (ADR 0002), not part of pass/fail. They live here
+because the phase-2 verify-* rows' metadata describes the verifier, not the solver.
+
+Contract: define get_assert(output, context) -> {pass, score, reason, namedScores}.
 The workspace is located from `context['provider']` (the row being graded), not
 from `output`: the native agentic providers return the agent's final message,
 not a workspace path.
@@ -25,6 +32,77 @@ _HERE = os.path.dirname(os.path.abspath(__file__))  # promptfoo/basic_layout
 
 # Reference images seeded from the problem dir — not solver screenshots.
 _REFERENCE_IMAGES = {"Basic layout.png", "Basic layout (mobile).png"}
+
+# Bash command fragments that signal "Vaadin API archaeology" — the agent digging
+# through jars / decompiling / spelunking the local Maven cache because it couldn't
+# recall an API. CONTEXT.md calls this out as a key DX pain signal.
+_ARCHAEOLOGY_HINTS = ("jar tf", "jar xf", "javap", ".m2/repository", "unzip ")
+
+
+def _trace_metrics(context):
+    """Behavioural-trace metrics for the SOLVER, read straight from this row's
+    provider-response metadata.
+
+    promptfoo's agentic providers (anthropic:claude-code, openai:codex) attach
+    skillCalls / toolCalls / numTurns / durationMs / modelUsage / permissionDenials
+    to the response metadata, exposed to the Python assertion as context['metadata'].
+    Returns metric_name -> number (becomes promptfoo namedScores / columns); {} for
+    a provider that exposes no such metadata.
+
+    These are DIAGNOSTICS, not pass/fail (ADR 0002: the trace is the real DX signal,
+    the rubric is only a floor). Lives here, on the PHASE 1 solver rows, because the
+    PHASE 2 verify-* rows' metadata describes the VERIFIER, not the solver.
+    """
+    ctx = context or {}
+    meta = ctx.get("metadata") or (ctx.get("providerResponse") or {}).get("metadata") or {}
+    if not isinstance(meta, dict) or not meta:
+        return {}
+
+    tool_calls = meta.get("toolCalls") or []
+    skill_calls = meta.get("skillCalls") or []
+
+    def _name(t):
+        return str((t or {}).get("name") or "")
+
+    mcp = [t for t in tool_calls if _name(t).startswith("mcp__")]
+    errored = [t for t in tool_calls if (t or {}).get("is_error")]
+    archaeology = 0
+    for t in tool_calls:
+        if _name(t) == "Bash":
+            cmd = ((t.get("input") or {}).get("command") or "") if isinstance(t.get("input"), dict) else ""
+            if any(h in cmd for h in _ARCHAEOLOGY_HINTS):
+                archaeology += 1
+
+    out = {
+        "skill_calls": float(len(skill_calls)),
+        "mcp_calls": float(len(mcp)),
+        "tool_calls": float(len(tool_calls)),
+        "tool_errors": float(len(errored)),
+        "api_archaeology_calls": float(archaeology),
+    }
+    if isinstance(meta.get("numTurns"), (int, float)):
+        out["num_turns"] = float(meta["numTurns"])
+    if isinstance(meta.get("durationMs"), (int, float)):
+        out["solve_seconds"] = round(meta["durationMs"] / 1000.0, 1)
+    denials = meta.get("permissionDenials") or []
+    if denials:
+        out["permission_denials"] = float(len(denials))
+
+    # Real token throughput. promptfoo's top-level token columns capture only
+    # input+output and DROP cache_read / cache_creation — which dominate agentic
+    # runs. modelUsage keeps the full picture.
+    mu = meta.get("modelUsage") or {}
+    cache_read = output_tok = 0
+    for m in (mu.values() if isinstance(mu, dict) else []):
+        if not isinstance(m, dict):
+            continue
+        cache_read += (m.get("cacheReadInputTokens") or m.get("cache_read_input_tokens") or 0)
+        output_tok += (m.get("outputTokens") or m.get("output_tokens") or 0)
+    if cache_read:
+        out["cache_read_ktokens"] = round(cache_read / 1000.0, 1)
+    if output_tok:
+        out["output_tokens"] = float(output_tok)
+    return out
 
 
 def _solver_authored(paths):
@@ -45,18 +123,22 @@ def _solver_authored(paths):
     return out
 
 
+# Workspace names, most-specific first so 'claude-no-skills' wins over 'claude'.
+_WORKSPACES = ("claude-no-skills", "codex", "claude")
+
+
 def _agent_from_provider(context):
-    """Map the grading row's provider to its solver name (codex|claude)."""
+    """Map the grading row's provider to its workspace name
+    (codex | claude | claude-no-skills)."""
     prov = (context or {}).get("provider")
     if isinstance(prov, dict):
         ident = prov.get("label") or prov.get("id") or ""
     else:
         ident = str(prov or "")
-    ident = ident.lower()
-    if "codex" in ident:
-        return "codex"
-    if "claude" in ident:
-        return "claude"
+    ident = ident.lower().replace("verify-", "").replace("verify_", "")
+    for name in _WORKSPACES:               # most-specific first
+        if name in ident:
+            return name
     return None
 
 
@@ -189,8 +271,18 @@ def get_assert(output, context=None):
         reason += ("\n\nScreenshots: {} solver capture(s) — open in a browser "
                    "(promptfoo shows reasons as plain text, not images):\n  "
                    "{}".format(n_shots, gallery))
-    return {
+
+    # Solver behavioural-trace columns (diagnostics, not part of pass/fail).
+    trace = _trace_metrics(context)
+    if trace:
+        reason += "\n\nSolver trace: " + ", ".join(
+            "{}={:g}".format(k, v) for k, v in sorted(trace.items()))
+
+    result = {
         "pass": bool(critical_ok),
         "score": score,
         "reason": reason,
     }
+    if trace:
+        result["namedScores"] = trace
+    return result

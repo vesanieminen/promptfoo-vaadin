@@ -1,21 +1,28 @@
 #!/usr/bin/env bash
-# Run the basic_layout benchmark with RUN-SCOPED Claude auth.
+# Run the basic_layout benchmark — PHASE 1 (solve) then PHASE 2 (verify).
 #
-# Why this wrapper exists:
-#   Two pieces need Claude auth, and on macOS one of them can't read your Keychain
-#   login:
-#     • The SOLVER (anthropic:claude-code provider) — by default authenticates via
-#       your Claude Code login (macOS Keychain).
-#     • The RUBRIC VERIFIER (grade_rubric.py) — shells out to `claude` with an
-#       ISOLATED CLAUDE_CONFIG_DIR (each workspace's .claude-home, for concurrent-
-#       run isolation). On macOS a NON-DEFAULT CLAUDE_CONFIG_DIR does NOT read the
-#       Keychain login, so the verifier needs an explicit credential in the env —
-#       without it the rubric assertion scores 0 ("Verifier did not produce
-#       verify-result.json").
+# What it does:
+#   1. PHASE 1  — promptfooconfig.yaml: the SOLVERS (codex, claude, claude-no-skills)
+#      solve the task into workspaces/<agent>/app (seed.js re-seeds fresh each run).
+#   2. PHASE 2  — verify.yaml: one VERIFIER provider per workspace grades the
+#      solution against the rubric and returns a structured verdict.
+#   Both phases are separate promptfoo evals; `promptfoo view` shows them together.
 #
-# This script resolves ONE credential and injects it into the bench PROCESS ONLY
-# (never exported to your interactive shell or written to your rc files). Both the
-# solver and the verifier then authenticate with it.
+# Auth (optional in subscription mode):
+#   Both phases are anthropic:claude-agent-sdk / claude-code / codex providers, so
+#   by default they authenticate from your existing Claude Code / Codex login
+#   (macOS Keychain). Unlike the OLD subprocess verifier, NOTHING here uses an
+#   isolated CLAUDE_CONFIG_DIR, so a token is NOT required when you're signed in.
+#
+#   Provide a credential only when you want to OVERRIDE that — e.g. bill against an
+#   API key, or run on a machine / CI with no Keychain login. If provided, this
+#   script resolves ONE credential and injects it into the bench PROCESS ONLY
+#   (never your interactive shell or rc files); if none is found it WARNS and
+#   relies on your login.
+#
+# REPEAT=<n> (default 1): re-run the whole solve+verify pipeline n times for
+#   variance (each iteration re-seeds fresh workspaces and shows as its own run in
+#   `promptfoo view`). Each row is a ~30-min agentic pass, so raise this knowingly.
 #
 # TWO AUTH MODES — YOU CHOOSE which to use by which credential you provide:
 #   • Anthropic API key   sk-ant-api...  → exported as ANTHROPIC_API_KEY  (NEW)
@@ -41,8 +48,9 @@
 # stdout, so the redirect captures the whole UI (and leaks the token into the file).
 #
 # Usage:
-#   bash basic_layout/run.sh                 # run the benchmark
-#   bash basic_layout/run.sh --filter-first-n 1   # extra args pass through to promptfoo
+#   bash basic_layout/run.sh                      # solve + verify, once
+#   REPEAT=3 bash basic_layout/run.sh             # run the whole pipeline 3x
+#   bash basic_layout/run.sh --filter-first-n 1   # extra args pass through to BOTH phases
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -63,50 +71,74 @@ elif [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
   TOK="$(printf '%s' "$CLAUDE_CODE_OAUTH_TOKEN" | tr -d '[:space:]')"; SRC="\$CLAUDE_CODE_OAUTH_TOKEN (env)"
 elif [ -f "$TOKEN_FILE" ]; then
   TOK="$(tr -d '[:space:]' < "$TOKEN_FILE")"; SRC="$TOKEN_FILE"
-else
-  echo "[run] ERROR: no credential found." >&2
-  echo "[run]   The verifier's isolated CLAUDE_CONFIG_DIR can't read the macOS Keychain," >&2
-  echo "[run]   so it needs an explicit credential. Provide ONE (this is your auth choice):" >&2
-  echo "[run]     • API key (bills the API):  export ANTHROPIC_API_KEY=sk-ant-api...  (or put it in $TOKEN_FILE)" >&2
-  echo "[run]     • Subscription token (OLD): claude setup-token  then  printf %s 'sk-ant-oat01-...' > $TOKEN_FILE" >&2
-  exit 1
 fi
 
-# 2) Classify the credential by prefix → export the matching var and unset the
-#    OTHER, so the bench process carries exactly ONE credential. The bare-token
-#    guard also rejects a redirected setup-token UI dump (multi-line) or stray
-#    quoting/spaces.
-case "$TOK" in
-  sk-ant-api*)
-    if ! printf '%s' "$TOK" | grep -Eq '^sk-ant-api[A-Za-z0-9_-]+$'; then
-      echo "[run] ERROR: $SRC is not a bare Anthropic API key (expected just sk-ant-api...)." >&2
+# 2) If a credential was provided, classify it by prefix → export the matching var
+#    and unset the OTHER, so the bench process carries exactly ONE credential. The
+#    bare-token guard also rejects a redirected setup-token UI dump (multi-line) or
+#    stray quoting/spaces. If NONE was provided, warn and rely on the Claude Code /
+#    Codex login (Keychain) — the providers no longer need an explicit token.
+if [ -z "$TOK" ]; then
+  echo "[run] note: no credential provided — relying on your Claude Code / Codex login" >&2
+  echo "[run]   (Keychain). To override (API-key billing, or a machine with no login):" >&2
+  echo "[run]     • API key:            export ANTHROPIC_API_KEY=sk-ant-api...  (or put it in $TOKEN_FILE)" >&2
+  echo "[run]     • Subscription token: claude setup-token  then  printf %s 'sk-ant-oat01-...' > $TOKEN_FILE" >&2
+else
+  case "$TOK" in
+    sk-ant-api*)
+      if ! printf '%s' "$TOK" | grep -Eq '^sk-ant-api[A-Za-z0-9_-]+$'; then
+        echo "[run] ERROR: $SRC is not a bare Anthropic API key (expected just sk-ant-api...)." >&2
+        exit 1
+      fi
+      export ANTHROPIC_API_KEY="$TOK"; unset CLAUDE_CODE_OAUTH_TOKEN || true
+      echo "[run] auth: Anthropic API key from $SRC (run-scoped; solver + verifier bill via the API key)" >&2
+      ;;
+    sk-ant-oat*)
+      if ! printf '%s' "$TOK" | grep -Eq '^sk-ant-oat[A-Za-z0-9_-]+$'; then
+        echo "[run] ERROR: $SRC is not a bare subscription token (expected just sk-ant-oat...)." >&2
+        echo "[run]   Don't redirect 'claude setup-token' into $TOKEN_FILE — that captures its" >&2
+        echo "[run]   interactive UI. Put ONLY the sk-ant-oat01-... value in the file." >&2
+        exit 1
+      fi
+      export CLAUDE_CODE_OAUTH_TOKEN="$TOK"; unset ANTHROPIC_API_KEY || true
+      echo "[run] auth: subscription OAuth token from $SRC (run-scoped)" >&2
+      ;;
+    *)
+      echo "[run] ERROR: $SRC is not a recognized credential (expected sk-ant-api... or sk-ant-oat...)." >&2
       exit 1
-    fi
-    export ANTHROPIC_API_KEY="$TOK"; unset CLAUDE_CODE_OAUTH_TOKEN || true
-    echo "[run] auth: Anthropic API key from $SRC (run-scoped; solver + verifier bill via the API key)" >&2
-    ;;
-  sk-ant-oat*)
-    if ! printf '%s' "$TOK" | grep -Eq '^sk-ant-oat[A-Za-z0-9_-]+$'; then
-      echo "[run] ERROR: $SRC is not a bare subscription token (expected just sk-ant-oat...)." >&2
-      echo "[run]   Don't redirect 'claude setup-token' into $TOKEN_FILE — that captures its" >&2
-      echo "[run]   interactive UI. Put ONLY the sk-ant-oat01-... value in the file." >&2
-      exit 1
-    fi
-    export CLAUDE_CODE_OAUTH_TOKEN="$TOK"; unset ANTHROPIC_API_KEY || true
-    echo "[run] auth: subscription OAuth token from $SRC (run-scoped)" >&2
-    ;;
-  *)
-    echo "[run] ERROR: $SRC is not a recognized credential (expected sk-ant-api... or sk-ant-oat...)." >&2
-    exit 1
-    ;;
-esac
+      ;;
+  esac
+fi
 
-# Warm the shared Maven cache once (cheap if already warm; avoids cold-download races
-# between the two concurrent solvers). ~/.m2 is the one un-isolated resource.
+# Warm the shared Maven cache once (cheap if already warm; avoids cold-download
+# races between the concurrent solvers). ~/.m2 is the one un-isolated resource.
 ( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline ) || true
 
-# --no-cache is REQUIRED, or the agentic providers replay cached output instead of
-# actually solving. --max-concurrency 2 runs both solvers (and verifiers) in parallel;
-# each has its own workspace, port, and isolated browser/config, so this is safe.
-exec npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml \
-  --max-concurrency 2 --no-cache "$@"
+REPEAT="${REPEAT:-1}"
+
+# One full pipeline pass: PHASE 1 (solve) then PHASE 2 (verify). --no-cache is
+# REQUIRED — the agentic providers cache by prompt, so without it a re-run replays
+# the first run instead of actually solving/verifying. --max-concurrency 3 runs all
+# three rows in parallel; each has its own workspace, port, and isolated browser,
+# so this is safe. Each phase is `|| true` so a failing/low-scoring row never stops
+# the others or the verify phase — the signal lives in `promptfoo view`, not the
+# wrapper's exit code.
+run_pipeline() {
+  echo "[run] PHASE 1/2 — solve  (promptfooconfig.yaml)" >&2
+  npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml \
+    --max-concurrency 3 --no-cache "$@" || true
+  echo "[run] PHASE 2/2 — verify (verify.yaml)" >&2
+  npx promptfoo@latest eval -c basic_layout/verify.yaml \
+    --max-concurrency 3 --no-cache "$@" || true
+}
+
+if [ "$REPEAT" -le 1 ]; then
+  run_pipeline "$@"
+else
+  for i in $(seq 1 "$REPEAT"); do
+    echo "[run] ===== repeat $i/$REPEAT =====" >&2
+    run_pipeline "$@"
+  done
+fi
+
+echo "[run] done. View results:  npx promptfoo@latest view" >&2

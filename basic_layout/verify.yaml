@@ -1,0 +1,175 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+#
+# basic_layout — PHASE 2: VERIFY.
+#
+# Phase 1 (promptfooconfig.yaml) runs the SOLVERS and leaves each agent's solution
+# in workspaces/<agent>/app. This phase grades those solutions.
+#
+# THE KEY DESIGN CHANGE (see docs/ADR-verifier-as-provider.md): the rubric verifier
+# is itself an agent — it runs the app, drives Playwright across viewports, and
+# judges against rubric.md. So it is modelled as a first-class promptfoo PROVIDER
+# (anthropic:claude-agent-sdk), one per solved workspace — NOT as a subprocess
+# spawned from inside a Python assertion (the old grade_rubric.py). Consequences:
+#   • promptfoo tracks the verifier's cost / tokens / latency natively (the
+#     verify-* rows) — closing the "verifier cost is invisible" gap.
+#   • the verdict comes back as STRUCTURED OUTPUT (output_format), parsed in the
+#     response — no verify-result.json disk round-trip required (still written as
+#     a fallback + human-readable artifact).
+#   • promptfoo owns retries / timeout / concurrency — grade_verdict.py is now a
+#     ~30-line score check, not a 400-line subprocess orchestrator.
+#
+# Run via the wrapper (does phase 1 then phase 2):  bash basic_layout/run.sh
+# Or directly (workspaces must already exist from a phase-1 run):
+#   npx promptfoo@latest eval -c basic_layout/verify.yaml --max-concurrency 3 --no-cache
+
+description: "agentic-dx basic_layout — PHASE 2: grade each solved workspace against the rubric"
+
+# ---------------------------------------------------------------------------
+# SEED — beforeAll hook that, for each workspace: restores rubric.md (stripped
+# during phase-1 seeding so the solver never saw it) into the verifier's cwd, and
+# frees the baked server port (clears any dev server the solver left running).
+# ---------------------------------------------------------------------------
+extensions:
+  - file://seed_verify.js:seed
+
+# ---------------------------------------------------------------------------
+# PROMPT — the verifier instructions (kept in sync with
+# ../agentic-dx-improvement/problems/verify_prompt.md), made port-agnostic: each
+# workspace's app runs on its own baked server.port (8081/8082/8083), so the
+# verifier reads the port from application.properties instead of assuming 8080.
+# ---------------------------------------------------------------------------
+prompts:
+  - |
+    You are an expert code reviewer evaluating AI-generated code.
+
+    The current working directory contains:
+    - `prompt.txt` — the task prompt that was given to the AI agent.
+    - `rubric.md` — the evaluation criteria and grading instructions.
+    - `app/` — the agent's solution.
+
+    Run the application by running the `app/run.sh` script. The app's HTTP port is
+    set in `app/src/main/resources/application.properties` (`server.port`) — read it
+    and wait for the application to start on THAT port (it is not necessarily 8080).
+    Use that port throughout.
+
+    Score the solution against the rubric, following the rubric's setup and grading
+    instructions exactly.
+
+    Playwright (chromium) is already installed and available as an MCP — use it to
+    drive the browser when the rubric calls for it. Use browser_snapshot / DOM
+    queries for behavior verification; reserve screenshots for layout/visual rubric
+    items.
+
+    Ignore any files ending in `.log` or `.log.jsonl` when scoring — they are
+    transcripts from prior agent runs and are not part of the solution.
+
+    Return your verdict as the configured STRUCTURED OUTPUT, and ALSO write the same
+    JSON to a file named `verify-result.json` in the current working directory (for
+    the record). Both must match this schema and contain nothing else:
+
+    {
+      "criteria": [
+        { "section": "string", "score": 0, "max-score": 0,
+          "bullets": [ { "name": "string", "score": 0, "feedback": "string" } ] }
+      ]
+    }
+
+# ---------------------------------------------------------------------------
+# PROVIDERS — one VERIFIER per solved workspace. All identical except working_dir
+# and the per-workspace Playwright output dir. The verifier model is pinned
+# (claude-opus-4-8) for reproducibility, like the solvers. Each Playwright MCP is
+# --isolated (in-memory profile) so the three verifiers can run concurrently
+# (--max-concurrency 3) without deadlocking on a shared browser profile lock; each
+# workspace's app is on its own baked port, so the apps don't collide either.
+#
+# Auth: apiKeyRequired:false lets the provider use ANTHROPIC_API_KEY when set
+# (run.sh's API-key mode) or fall back to the Claude Code login / OAuth token.
+# Unlike the old subprocess verifier, this provider does NOT need an isolated
+# CLAUDE_CONFIG_DIR, so the per-workspace .claude-home is gone.
+# ---------------------------------------------------------------------------
+providers:
+  - id: anthropic:claude-agent-sdk
+    label: verify-codex
+    config:
+      apiKeyRequired: false
+      model: claude-opus-4-8
+      working_dir: workspaces/codex
+      permission_mode: bypassPermissions
+      allow_dangerously_skip_permissions: true
+      allow_all_tools: true
+      setting_sources: []
+      # Verdict schema, anchored here and aliased by the other two verifiers below.
+      output_format: &verdict_schema
+        type: json_schema
+        schema:
+          type: object
+          required: [criteria]
+          properties:
+            criteria:
+              type: array
+              items:
+                type: object
+                required: [section, score, max-score]
+                properties:
+                  section: { type: string }
+                  score: { type: number }
+                  max-score: { type: number }
+                  bullets:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, score]
+                      properties:
+                        name: { type: string }
+                        score: { type: number }
+                        feedback: { type: string }
+      mcp:
+        servers:
+          - name: playwright
+            command: npx
+            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated", "--output-dir", "workspaces/codex/.pw-verify"]
+
+  - id: anthropic:claude-agent-sdk
+    label: verify-claude
+    config:
+      apiKeyRequired: false
+      model: claude-opus-4-8
+      working_dir: workspaces/claude
+      permission_mode: bypassPermissions
+      allow_dangerously_skip_permissions: true
+      allow_all_tools: true
+      setting_sources: []
+      output_format: *verdict_schema
+      mcp:
+        servers:
+          - name: playwright
+            command: npx
+            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated", "--output-dir", "workspaces/claude/.pw-verify"]
+
+  - id: anthropic:claude-agent-sdk
+    label: verify-claude-no-skills
+    config:
+      apiKeyRequired: false
+      model: claude-opus-4-8
+      working_dir: workspaces/claude-no-skills
+      permission_mode: bypassPermissions
+      allow_dangerously_skip_permissions: true
+      allow_all_tools: true
+      setting_sources: []
+      output_format: *verdict_schema
+      mcp:
+        servers:
+          - name: playwright
+            command: npx
+            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated", "--output-dir", "workspaces/claude-no-skills/.pw-verify"]
+
+# ---------------------------------------------------------------------------
+# TEST — grade_verdict.py reads this row's structured verdict (fallback:
+# verify-result.json), normalizes to the rubric fraction, and passes if it clears
+# the floor. Per-section fractions are emitted as rubric_<section> columns.
+# ---------------------------------------------------------------------------
+tests:
+  - description: "rubric verdict for the solved workspace"
+    assert:
+      - type: python
+        value: file://grade_verdict.py
