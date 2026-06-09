@@ -168,6 +168,15 @@ npx promptfoo@latest view      # solve rows + verify rows, side by side
 REPEAT=3 bash basic_layout/run.sh
 ```
 
+Seed-only check (no agents / auth / Maven, ~2s) — re-seeds the workspaces and prints
+the availability manifest (`workspaces/available.json`: agent-skills SHA + skill list +
+plugin-declared MCP servers + reachability). Sanity-checks that the sibling checkout is
+wired up and shows what skills/MCP **source** a run will use:
+
+```bash
+bash basic_layout/seed.sh
+```
+
 Manual equivalent (run the two phases yourself):
 
 ```bash
