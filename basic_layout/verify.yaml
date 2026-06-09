@@ -75,12 +75,15 @@ prompts:
     }
 
 # ---------------------------------------------------------------------------
-# PROVIDERS — one VERIFIER per solved workspace. All identical except working_dir
-# and the per-workspace Playwright output dir. The verifier model is pinned
-# (claude-opus-4-8) for reproducibility, like the solvers. Each Playwright MCP is
-# --isolated (in-memory profile) so the three verifiers can run concurrently
-# (--max-concurrency 3) without deadlocking on a shared browser profile lock; each
-# workspace's app is on its own baked port, so the apps don't collide either.
+# PROVIDERS — one VERIFIER per solved workspace, identical except working_dir. The
+# verifier model is pinned (claude-opus-4-8) for reproducibility, like the solvers.
+# Each Playwright MCP is --isolated (in-memory profile) so the three verifiers can
+# run concurrently (--max-concurrency 3) without deadlocking on a shared browser
+# profile lock; each workspace's app is on its own baked port, so the apps don't
+# collide either. NO --output-dir: a relative one resolves against the MCP's cwd
+# (= working_dir) and doubles the path (workspaces/X/workspaces/X/.pw-verify);
+# screenshots saved with a filename land at the working_dir root anyway, which
+# grade_verdict.py scans for the gallery.
 #
 # Auth: apiKeyRequired:false lets the provider use ANTHROPIC_API_KEY when set
 # (run.sh's API-key mode) or fall back to the Claude Code login / OAuth token.
@@ -127,7 +130,7 @@ providers:
         servers:
           - name: playwright
             command: npx
-            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated", "--output-dir", "workspaces/codex/.pw-verify"]
+            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated"]
 
   - id: anthropic:claude-agent-sdk
     label: verify-claude
@@ -144,7 +147,7 @@ providers:
         servers:
           - name: playwright
             command: npx
-            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated", "--output-dir", "workspaces/claude/.pw-verify"]
+            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated"]
 
   - id: anthropic:claude-agent-sdk
     label: verify-claude-no-skills
@@ -161,7 +164,7 @@ providers:
         servers:
           - name: playwright
             command: npx
-            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated", "--output-dir", "workspaces/claude-no-skills/.pw-verify"]
+            args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated"]
 
 # ---------------------------------------------------------------------------
 # TEST — grade_verdict.py reads this row's structured verdict (fallback:

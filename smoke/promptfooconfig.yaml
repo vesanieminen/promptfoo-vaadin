@@ -6,19 +6,20 @@
 #   1. EVAL / solver  → the agentic `anthropic:claude-code` provider answers a
 #                       trivial prompt. Authenticates via your default Claude Code
 #                       login (on macOS, the Keychain). No token needed.
-#   2. TOKEN auth     → verify_auth.py shells out to `claude` under an ISOLATED
-#                       CLAUDE_CONFIG_DIR — the strictest case, forcing token-only
-#                       auth (on macOS an isolated config dir can't read the Keychain,
-#                       so it needs a run-scoped CLAUDE_CODE_OAUTH_TOKEN). The
-#                       basic_layout verifier USED to run this way (old
-#                       grade_rubric.py); it's now a provider that can use the
-#                       Keychain, so a token is OPTIONAL — this stays as a defensive
-#                       check of the token path. See docs/ADR-verifier-as-provider.md.
+#   2. CLI auth        → verify_auth.py shells out to a trivial `claude -p` on the
+#                        SAME path you're about to run the benchmark on:
+#                          • no token  → DEFAULT config dir (your Keychain login) —
+#                            the path the provider-based verifier now uses;
+#                          • token set → ISOLATED CLAUDE_CONFIG_DIR (strictest, no
+#                            Keychain) — asserts the token itself authenticates.
+#                        (The old grade_rubric.py subprocess always forced the
+#                        isolated path; the verifier is now a provider, so a token is
+#                        OPTIONAL. See docs/ADR-verifier-as-provider.md.)
 #
-# Run it:  bash smoke/run.sh          (injects the run-scoped token — see README.md)
-# Expect:  token present → BOTH assertions PASS.
-#          no token      → solver PASSES, token-auth check FAILS (with a clear reason;
-#                          the benchmark itself still works via your Keychain login).
+# Run it:  bash smoke/run.sh          (injects a token only if you have one — see README.md)
+# Expect:  logged in (token or Keychain) → BOTH assertions PASS.
+#          not authenticated            → BOTH FAIL with a clear reason
+#                                          (`claude /login`, or supply a token).
 
 description: "Claude auth smoke test — eval (solver) + verification paths"
 
@@ -43,6 +44,7 @@ tests:
       # (1) EVAL / solver auth: the agentic provider authenticated and replied.
       - type: contains
         value: "SOLVER_OK"
-      # (2) VERIFICATION auth: isolated-config `claude` authenticates (needs token).
+      # (2) VERIFICATION auth: `claude` authenticates on the path the benchmark uses
+      #     (default-config Keychain login when no token; isolated-config token when set).
       - type: python
         value: file://verify_auth.py
