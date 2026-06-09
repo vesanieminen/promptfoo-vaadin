@@ -1,25 +1,36 @@
-# `basic_layout` — promptfoo configuration
+# agentic-dx benchmark — promptfoo configuration
 
-A [promptfoo](https://www.promptfoo.dev/) port of the **`basic_layout`** benchmark
-from the [`agentic-dx-improvement`](../../agentic-dx-improvement) harness.
+A [promptfoo](https://www.promptfoo.dev/) port of the
+[`agentic-dx-improvement`](../../agentic-dx-improvement) benchmark.
 
-The task: implement a responsive Vaadin Flow view at `/basic_layout` (top + bottom
-toolbars with left/right component groups, a middle scrolling content area, and
-specific wide vs `<380px` behaviour), starting from the Vaadin skeleton, then grade
-the result against `rubric.md`.
+> **Directory name.** This dir is still called `basic_layout/` for history, but it
+> now hosts **all** the benchmark problems, not just `basic_layout`.
 
-It runs in **two phases**, both as ordinary promptfoo evals:
+It runs **three problems** (each a Vaadin Flow task, starting from the same Vaadin
+skeleton, graded against its own `rubric.md`):
 
-1. **Solve** (`promptfooconfig.yaml`) — three solvers, as promptfoo's **built-in
+| `PROBLEM` | Task | Rubric max (Vaadin) |
+|---|---|---|
+| `basic_layout` | responsive view at `/basic_layout` — top/bottom toolbars, scrolling content area, wide vs `<380px` behaviour | 21 (24) |
+| `basic_form` | responsive onboarding form at `/basic_form` — 7 sections, 2-col@≥800px / 1-col@<380px, reusable component | 23 (31) |
+| `md_ui_spec` | Employees CRUD at `/employees` from a markdown UI spec — grid + drawer, add/edit/delete flows, validation, in-memory service | 41 (48) |
+
+Each problem runs in **two phases**, both as ordinary promptfoo evals. The configs
+are PROBLEM-parameterized JavaScript (`.js`, not `.yaml`) so one config set serves
+all problems — `run.sh` runs them once per `PROBLEM` (default: all three):
+
+1. **Solve** (`promptfooconfig.js`) — three solvers, as promptfoo's **built-in
    agentic providers**, each edit a fresh workspace:
    - **`codex`** — the Codex CLI (`gpt-5.5`), with the Vaadin skills + docs MCP;
    - **`claude`** — the agentic Claude Code provider (`claude-opus-4-8`), with the
      Vaadin agent-skills plugin + docs MCP;
    - **`claude-no-skills`** — the **baseline**: same `claude` solver, *without* the
      Vaadin skills/MCP, to isolate how much the skills move the rubric.
-2. **Verify** (`verify.yaml`) — one **verifier provider per solved workspace**
+2. **Verify** (`verify.js`) — one **verifier provider per solved workspace**
    (`anthropic:claude-agent-sdk` + Playwright) runs the app, inspects it across
-   viewports, and returns a structured rubric verdict.
+   viewports, and returns a structured rubric verdict. This phase is
+   problem-agnostic: the verifier reads whatever `rubric.md` it's given and
+   `grade_verdict.py` normalizes the verdict (21/24, 23/31, or 41/48 all just work).
 
 > **Why the verifier is a *provider*, not an assertion.** The verifier is itself an
 > agent (it runs the app and drives a browser), so it's modelled as a first-class
@@ -41,14 +52,27 @@ It runs in **two phases**, both as ordinary promptfoo evals:
 |---|---|
 | `run_task_local.sh` seeds a workspace and runs the solver agent | split in two: **`seed.js`** (a `beforeAll` extension) seeds the workspaces; the **native agentic providers** run the agents |
 | the solver CLIs (`codex` / `claude` with `--dangerously-…`) | promptfoo's **`openai:codex:gpt-5.5`** and **`anthropic:claude-code`** providers (the latter twice — with and without the Vaadin skills) — agentic, full file/command access, Playwright + Vaadin-docs MCP, the Vaadin skills (Claude via the agent-skills plugin, Codex via `.agents/skills/`), **model pinned** (`claude-opus-4-8` / `gpt-5.5`) but otherwise no effort/temperature tuning |
-| `problems/base_prompt_vaadin.md` + the "task is in cwd" preamble | inlined as the `prompts:` block in `promptfooconfig.yaml` (kept in sync with the source file) |
+| `problems/base_prompt_vaadin.md` + the "task is in cwd" preamble | inlined as the `prompts:` block in `promptfooconfig.js` (kept in sync with the source file); shared by all problems (all use the Vaadin skeleton) |
 | `task.md` + reference PNGs | seeded into each workspace by `seed.js`, read by the agent from its `working_dir` |
-| rubric **Structure** + **Vaadin-specific** sections ("verify by reading the source") | **`grade_static.py`** (phase 1) — deterministic source checks: `@Route("basic_layout")`, `HorizontalLayout`/`VerticalLayout`, `Scroller`, no inline styles, no React/TSX leakage. Also emits the solver-trace columns (below). |
-| `verify_task.sh` + `verify_prompt.md` (agentic browser grader) | **`verify.yaml`** (phase 2) — the verifier as a **provider per workspace**, prompt inlined (port-agnostic) and verdict returned as `output_format` structured output; **`grade_verdict.py`** normalizes it to the `/21` (or `/24`) score |
+| rubric source-verifiable bullets (**Structure** + **Vaadin-specific**, "verify by reading the source") | **`grade_static.py`** (phase 1) — a problem-agnostic harness that dispatches to **`checks/<problem>.py`** for the deterministic source checks (e.g. the route, `FormLayout`/`EmailField`/`Binder`/`ConfirmDialog`, no inline styles, no React/TSX leakage). Also emits the solver-trace columns (below). |
+| `verify_task.sh` + `verify_prompt.md` (agentic browser grader) | **`verify.js`** (phase 2) — the verifier as a **provider per workspace**, prompt inlined (port-agnostic) and verdict returned as `output_format` structured output; **`grade_verdict.py`** normalizes it to the per-problem `/max` score |
 | `claude-home.sh` (isolated Claude config + Playwright profile) | **gone** — the verifier is a provider now, so it needs no isolated `CLAUDE_CONFIG_DIR`; Playwright isolation is the provider's own `--isolated` MCP |
 
-Each grader finds its row's workspace from `context['provider']` (`codex` →
-`workspaces/codex`, `verify-claude-no-skills` → `workspaces/claude-no-skills`, …).
+`bench.js` is the single source of truth for the problem list, the agent list, and
+the per-`(problem, agent)` port / workspace layout — imported by both configs and
+both seed hooks (the Python graders re-derive the same paths from `PROBLEM`). Each
+grader finds its row's workspace from `context['provider']` + `PROBLEM` (`codex` on
+`basic_form` → `workspaces/basic_form/codex`, `verify-claude-no-skills` →
+`workspaces/<problem>/claude-no-skills`, …).
+
+### Adding a problem
+
+It's a drop-in: (1) add `problems/<name>/` (`task.md` + `rubric.md` [+ reference
+PNGs]) to the `agentic-dx-improvement` checkout, (2) append `<name>` to `PROBLEMS`
+in `bench.js`, and (3) add `checks/<name>.py` (a `run_checks(ctx)` returning the
+source-checkable bullets; reuse `ctx.common_hygiene()` for the no-inline-styles /
+no-TSX bullets). Ports and workspaces follow automatically; phase-2 grading needs no
+change. (No `checks/<name>.py` → phase-1 degrades to shared hygiene checks only.)
 
 ### What was intentionally skipped (doesn't fit / is redundant in promptfoo)
 
@@ -156,19 +180,24 @@ From the **repo root** (the providers' `working_dir` and the `file://` grader pa
 resolve relative to each config's directory):
 
 ```bash
-# RECOMMENDED — the wrapper warms the Maven cache, runs PHASE 1 (solve) then PHASE 2
-# (verify) with --no-cache, and (optionally) injects ONE run-scoped Claude credential
-# into the bench PROCESS ONLY. Never touches your rc files.
-bash basic_layout/run.sh
-npx promptfoo@latest view      # solve rows + verify rows, side by side
+# RECOMMENDED — the wrapper warms the Maven cache, then for each PROBLEM runs PHASE 1
+# (solve) then PHASE 2 (verify) with --no-cache, and (optionally) injects ONE
+# run-scoped Claude credential into the bench PROCESS ONLY. Never touches your rc files.
+bash basic_layout/run.sh                          # ALL problems × all agents
+npx promptfoo@latest view                         # every problem's solve + verify rows, side by side
 
-# Variance: re-run the whole solve+verify pipeline N times (each iteration re-seeds
-# fresh workspaces and shows as its own run in `promptfoo view`). Each row is a
-# ~30-min agentic pass, so raise this knowingly.
+PROBLEM=basic_form bash basic_layout/run.sh        # just one problem
+PROBLEM=basic_form,md_ui_spec bash basic_layout/run.sh
+AGENT=claude,claude-no-skills bash basic_layout/run.sh   # narrow the agent rows (the skills A/B)
+
+# Variance: re-run the whole thing N times (each iteration re-seeds fresh workspaces
+# and shows as its own run in `promptfoo view`). Each row is a ~30-min agentic pass,
+# and the default is 3 problems × 3 agents × 2 phases — so raise REPEAT knowingly.
 REPEAT=3 bash basic_layout/run.sh
 ```
 
-Manual equivalent (run the two phases yourself):
+Manual equivalent (run one problem's two phases yourself — set `PROBLEM` so the
+configs/seed/graders all target the same problem):
 
 ```bash
 # Optional: pick an auth override (otherwise your Claude Code / Codex login is used):
@@ -176,14 +205,16 @@ Manual equivalent (run the two phases yourself):
 ( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline )  # warm ~/.m2 once
 # --no-cache is REQUIRED: the agentic providers cache by prompt, so without it a
 # re-run replays the first run instead of actually solving/verifying.
-npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml --max-concurrency 3 --no-cache  # PHASE 1
-npx promptfoo@latest eval -c basic_layout/verify.yaml          --max-concurrency 3 --no-cache  # PHASE 2
+PROBLEM=basic_form npx promptfoo@latest eval -c basic_layout/promptfooconfig.js --max-concurrency 3 --no-cache  # PHASE 1
+PROBLEM=basic_form npx promptfoo@latest eval -c basic_layout/verify.js          --max-concurrency 3 --no-cache  # PHASE 2
 ```
 
-`--max-concurrency 3` runs all three rows at once; safe because each has its own
-workspace and baked port (Codex `8081`, Claude `8082`, no-skills `8083`). Each run's
-workspace (the agent's modified project + logs + `verify-result.json`) lives under
-`basic_layout/workspaces/<agent>/` (gitignored, recreated each run).
+`--max-concurrency 3` runs all three agent rows at once; safe because each has its
+own workspace and baked port. Ports are assigned per `(problem, agent)` from
+`bench.js` (`8081..8089`): `basic_layout` `8081/8082/8083`, `basic_form`
+`8084/8085/8086`, `md_ui_spec` `8087/8088/8089`. Each run's workspace (the agent's
+modified project + logs + `verify-result.json`) lives under
+`basic_layout/workspaces/<problem>/<agent>/` (gitignored, recreated each run).
 
 ### Concurrency & isolation
 
@@ -192,8 +223,8 @@ isolated by `seed.js` up front, statically per provider:
 
 | Shared resource | Collision if not isolated | How it's isolated |
 |---|---|---|
-| **Server port** | All apps bind `8080` | A fixed port per provider (`8081`/`8082`/`8083`) is baked into each workspace's `application.properties` (`server.port=${PORT:808x}`); `seed_verify.js` frees it before the verifier rebuilds. |
-| **Workspace files** | One workspace, many agents | One workspace per provider (`workspaces/<agent>`). |
+| **Server port** | All apps bind `8080` | A fixed port per `(problem, agent)` (`bench.portFor` → `8081..8089`) is baked into each workspace's `application.properties` (`server.port=${PORT:808x}`); `seed_verify.js` frees it before the verifier rebuilds. |
+| **Workspace files** | One workspace, many agents/problems | One workspace per `(problem, agent)` (`workspaces/<problem>/<agent>`). |
 | **Playwright MCP browser** | Browsers share one persistent profile → singleton-lock deadlock | every Playwright MCP registration (solvers and verifiers) uses `--isolated` (in-memory profile). |
 | **`~/.m2`** | concurrent *cold* downloads can race | **not** isolated. Warm it once first; concurrent reads of a warm cache are fine. |
 
@@ -201,10 +232,11 @@ isolated by `seed.js` up front, statically per provider:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `AGENTIC_DX_DIR` | `../agentic-dx-improvement` | Source of the problem, skeleton, base prompt, rubric (used by `seed.js` / `seed_verify.js`). **Note:** the `claude` provider's plugin path in `promptfooconfig.yaml` is the literal sibling default — adjust it there too if you relocate the checkout. |
-| `PROBLEM` | `basic_layout` | Problem dir name (the config generalizes to other problems) |
+| `AGENTIC_DX_DIR` | `../agentic-dx-improvement` | Source of the problems, skeleton, base prompt, rubrics (used by `seed.js` / `seed_verify.js`). **Note:** the `claude` provider's plugin path in `promptfooconfig.js` is the literal sibling default — adjust it there too if you relocate the checkout. |
+| `PROBLEM` | _(all)_ | **`run.sh`:** which problem(s) to run — one or a comma-list (`basic_layout`, `basic_form`, `md_ui_spec`); default all. **A bare `eval -c …`:** the single problem this eval targets (default `basic_layout`). |
 | `TECHSTACK` | `vaadin` | Skeleton + base-prompt stack |
 | `RUBRIC_PASS_THRESHOLD` | `0.6` | Floor (fraction of max) for `grade_verdict.py` to pass |
+| `AGENT` | _(all)_ | `run.sh` only: which agent row(s) to run — `codex`, `claude`, `claude-no-skills` (comma-list ok) |
 | `REPEAT` | `1` | `run.sh` only: re-run the whole solve+verify pipeline N times |
 | `ANTHROPIC_API_KEY` | _(optional override)_ | **API-key auth mode.** Bills against the API key (solver + verifier); precedence over any login. Inject run-scoped via `run.sh`. |
 | `CLAUDE_CODE_OAUTH_TOKEN` | _(optional override)_ | **Subscription auth mode.** For a machine/CI with no Keychain login. Inject run-scoped via `run.sh`. |

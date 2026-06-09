@@ -1,9 +1,14 @@
-"""Rubric-verdict grader for the basic_layout task — PHASE 2 (verify.yaml).
+"""Rubric-verdict grader for the agentic-dx verify phase — PHASE 2 (verify.js).
+
+Problem-agnostic: it sums whatever rubric sections the verifier reported and
+normalizes, so it works unchanged across problems (a 21/24, 23/31, or 41/48 rubric
+all normalize the same way). The problem is read from PROBLEM (set by run.sh; default
+basic_layout) only to locate the namespaced workspace and label the screenshot gallery.
 
 This is the trimmed successor to the old grade_rubric.py. The heavy lifting —
 running the app, driving Playwright across viewports, scoring against rubric.md —
 is no longer done HERE. It is done by the VERIFIER, which is now a first-class
-promptfoo provider (anthropic:claude-agent-sdk) in verify.yaml, one per solved
+promptfoo provider (anthropic:claude-agent-sdk) in verify.js, one per solved
 workspace. See docs/ADR-verifier-as-provider.md for why.
 
 So this assertion no longer spawns a subprocess, manages ports, retries, or an
@@ -11,7 +16,7 @@ isolated Claude home. It just reads the verifier provider's structured verdict
 and turns it into a pass/score + per-section diagnostic columns:
 
   1. Locate this row's workspace from context['provider'] (verify-codex ->
-     workspaces/codex, etc.).
+     workspaces/<problem>/codex, etc.).
   2. Read the verdict. Primary source: the provider's STRUCTURED OUTPUT (the
      configured output_format schema), delivered as the parsed `output` object
      (or context['metadata']['structuredOutput']). Fallback: verify-result.json
@@ -37,11 +42,24 @@ import json
 import os
 import re
 
-_HERE = os.path.dirname(os.path.abspath(__file__))            # promptfoo/basic_layout
+_HERE = os.path.dirname(os.path.abspath(__file__))            # promptfoo/basic_layout (the bench dir)
 _PASS_THRESHOLD = float(os.environ.get("RUBRIC_PASS_THRESHOLD", "0.6"))
+# The problem this row belongs to (run.sh sets PROBLEM per problem; default basic_layout).
+_PROBLEM = os.environ.get("PROBLEM", "basic_layout")
 
-# Reference images seeded from the problem dir — exclude from the captured set.
-_REFERENCE_IMAGES = {"Basic layout.png", "Basic layout (mobile).png"}
+
+def _reference_images(workspace):
+    """Seeded reference PNGs recorded by seed.js in .reference-images.json — excluded
+    from the verifier's screenshot gallery, with no hardcoded filenames per problem.
+    Empty set if absent (e.g. md_ui_spec, which ships no PNGs)."""
+    try:
+        with open(os.path.join(workspace, ".reference-images.json"), encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return {str(n) for n in data}
+    except Exception:
+        pass
+    return set()
 
 # Valid workspace names. A provider label maps to one of these EXACTLY after the
 # `verify-` prefix is stripped: solver labels ARE the name (codex / claude /
@@ -76,7 +94,8 @@ def _workspace(context):
     agent = _agent_from_provider(context)
     if not agent:
         return None
-    ws = os.path.join(_HERE, "workspaces", agent)
+    # workspaces/<problem>/<agent> — must match seed.js's bench.workspaceRel.
+    ws = os.path.join(_HERE, "workspaces", _PROBLEM, agent)
     return ws if os.path.isdir(ws) else None
 
 
@@ -129,7 +148,7 @@ def _slug(name):
     return s or "section"
 
 
-def _write_screenshot_gallery(workspace, out_name, title):
+def _write_screenshot_gallery(workspace, out_name, title, reference_images):
     """Self-contained HTML gallery of the verifier's PNG captures (data URIs).
 
     Scans the workspace root and its `.pw-verify` Playwright output dir, skipping
@@ -144,7 +163,7 @@ def _write_screenshot_gallery(workspace, out_name, title):
         if not os.path.isdir(d):
             continue
         for n in sorted(os.listdir(d)):
-            if n.lower().endswith(".png") and n not in _REFERENCE_IMAGES:
+            if n.lower().endswith(".png") and n not in reference_images:
                 candidates.append(os.path.join(d, n))
     if not candidates:
         return None, 0
@@ -214,7 +233,8 @@ def get_assert(output, context=None):
 
     gallery, n_shots = _write_screenshot_gallery(
         workspace, "verify-screenshots.html",
-        "{} — basic_layout verifier screenshots".format(os.path.basename(workspace)))
+        "{} — {} verifier screenshots".format(os.path.basename(workspace), _PROBLEM),
+        _reference_images(workspace))
     if gallery:
         reason += ("\n\nScreenshots: {} viewport capture(s) — open in a browser "
                    "(promptfoo shows reasons as plain text, not images):\n  "
