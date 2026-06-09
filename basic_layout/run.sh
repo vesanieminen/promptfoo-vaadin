@@ -48,9 +48,20 @@
 # stdout, so the redirect captures the whole UI (and leaks the token into the file).
 #
 # Usage:
-#   bash basic_layout/run.sh                      # solve + verify, once
-#   REPEAT=3 bash basic_layout/run.sh             # run the whole pipeline 3x
-#   bash basic_layout/run.sh --filter-first-n 1   # extra args pass through to BOTH phases
+#   bash basic_layout/run.sh                          # all rows: solve + verify, once
+#   REPEAT=3 bash basic_layout/run.sh                 # run the whole pipeline 3x
+#   bash basic_layout/run.sh --filter-providers 'claude$'   # one Claude row (see below)
+#
+# Filtering rows — extra args pass through to BOTH phases. promptfoo's
+# --filter-providers matches a provider's id OR label, and ALL phase-2 verifiers
+# share the id `anthropic:claude-agent-sdk` (which contains "claude"), so a bare
+# `--filter-providers claude` OVER-matches in verify (pulls in verify-codex too).
+# Use ANCHORED regexes:
+#   one Claude row ........ --filter-providers 'claude$'
+#   Claude + no-skills .... --filter-providers '(verify-)?claude(-no-skills)?$'
+#   Codex only ............ --filter-providers codex     ("codex" isn't in the id, so it's clean)
+# (--filter-first-n N filters TEST CASES, not providers — there's one test per
+#  phase, so it won't reduce the rows; use --filter-providers for that.)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

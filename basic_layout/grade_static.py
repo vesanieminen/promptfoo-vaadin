@@ -123,23 +123,28 @@ def _solver_authored(paths):
     return out
 
 
-# Workspace names, most-specific first so 'claude-no-skills' wins over 'claude'.
-_WORKSPACES = ("claude-no-skills", "codex", "claude")
+# Valid workspace names. A provider label maps to one of these EXACTLY after the
+# `verify-` prefix is stripped. Exact match — not a substring scan — so 'claude' can
+# never be mistaken for 'claude-no-skills' (the id `anthropic:claude-agent-sdk` also
+# contains "claude"), regardless of ordering.
+_WORKSPACES = frozenset(("codex", "claude", "claude-no-skills"))
 
 
 def _agent_from_provider(context):
     """Map the grading row's provider to its workspace name
-    (codex | claude | claude-no-skills)."""
+    (codex | claude | claude-no-skills): exact-match the label with any `verify-`
+    prefix stripped; None if unrecognized."""
     prov = (context or {}).get("provider")
     if isinstance(prov, dict):
         ident = prov.get("label") or prov.get("id") or ""
     else:
         ident = str(prov or "")
-    ident = ident.lower().replace("verify-", "").replace("verify_", "")
-    for name in _WORKSPACES:               # most-specific first
-        if name in ident:
-            return name
-    return None
+    ident = ident.strip().lower()
+    for pfx in ("verify-", "verify_"):
+        if ident.startswith(pfx):
+            ident = ident[len(pfx):]
+            break
+    return ident if ident in _WORKSPACES else None
 
 
 def _app_dir(context):

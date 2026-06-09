@@ -43,26 +43,33 @@ _PASS_THRESHOLD = float(os.environ.get("RUBRIC_PASS_THRESHOLD", "0.6"))
 # Reference images seeded from the problem dir — exclude from the captured set.
 _REFERENCE_IMAGES = {"Basic layout.png", "Basic layout (mobile).png"}
 
-# Workspace names, most-specific first so 'claude-no-skills' wins over 'claude'.
-_WORKSPACES = ("claude-no-skills", "codex", "claude")
+# Valid workspace names. A provider label maps to one of these EXACTLY after the
+# `verify-` prefix is stripped: solver labels ARE the name (codex / claude /
+# claude-no-skills); verifier labels are `verify-<name>`. Exact match — not a
+# substring scan — so 'claude' can never be mistaken for 'claude-no-skills' (the id
+# `anthropic:claude-agent-sdk` also contains "claude"), regardless of ordering.
+_WORKSPACES = frozenset(("codex", "claude", "claude-no-skills"))
 
 
 def _agent_from_provider(context):
     """Map the grading row's provider to its workspace name.
 
     Handles both PHASE 1 solver labels (codex / claude / claude-no-skills) and
-    PHASE 2 verifier labels (verify-codex / verify-claude / verify-claude-no-skills).
+    PHASE 2 verifier labels (verify-codex / verify-claude / verify-claude-no-skills),
+    by stripping the `verify-` prefix and matching the remainder EXACTLY. Returns
+    None for anything unrecognized — a clean fail, not a silent misroute.
     """
     prov = (context or {}).get("provider")
     if isinstance(prov, dict):
         ident = prov.get("label") or prov.get("id") or ""
     else:
         ident = str(prov or "")
-    ident = ident.lower().replace("verify-", "").replace("verify_", "")
-    for name in _WORKSPACES:               # most-specific first
-        if name in ident:
-            return name
-    return None
+    ident = ident.strip().lower()
+    for pfx in ("verify-", "verify_"):
+        if ident.startswith(pfx):
+            ident = ident[len(pfx):]
+            break
+    return ident if ident in _WORKSPACES else None
 
 
 def _workspace(context):
