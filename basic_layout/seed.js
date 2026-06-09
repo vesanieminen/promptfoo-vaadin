@@ -8,7 +8,10 @@
 //   - strips rubric.md so the solver never sees the grading criteria
 //     (seed_verify.js restores it before phase 2),
 //   - bakes a per-provider server port so the rows never collide on 8080
-//     when run with --max-concurrency 3.
+//     when run with --max-concurrency 3,
+//   - writes workspaces/available.json: an availability manifest (agent-skills SHA
+//     + skill list + plugin-declared MCP servers) so each run records what the
+//     skills/MCP SOURCE provided and its version (see writeManifest below).
 //
 // The old per-workspace .claude-home is gone: the rubric verifier is now a
 // promptfoo PROVIDER (verify.yaml), not a subprocess, so it needs no isolated
@@ -23,6 +26,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const HERE = __dirname; // promptfoo/basic_layout
 const REPO_ROOT = path.dirname(HERE); // promptfoo
@@ -39,6 +43,7 @@ const BASE_PROMPT_FILE = path.join(AGENTIC_DX_DIR, 'problems', `base_prompt_${TE
 // as a plugin; Codex has no plugin loader, so we install these skills into the
 // Codex workspace's `.agents/skills/` (Codex's own discovery location) for parity.
 const SKILLS_DIR = path.join(AGENTIC_DX_DIR, 'agent-skills', 'skills');
+const AGENT_SKILLS_ROOT = path.join(AGENTIC_DX_DIR, 'agent-skills'); // plugin root: holds .mcp.json + .claude-plugin/plugin.json
 
 // One workspace per solver provider, each on a dedicated port. The matching
 // provider `working_dir` and the graders' provider->workspace map use the same
@@ -123,6 +128,110 @@ function seedCodexSkills(ws) {
   fs.symlinkSync(SKILLS_DIR, dest, 'dir'); // SKILLS_DIR is absolute
 }
 
+// ---------------------------------------------------------------------------
+// Availability manifest — workspaces/available.json records WHAT the skills/MCP
+// SOURCE provided for this run, and its version. It exists because "available" was
+// previously unrecorded: we discovered by hand that the agent-skills plugin's
+// .mcp.json Vaadin server is NOT auto-loaded by the claude-agent-sdk provider (the
+// skills load via `plugins:`, the MCP does not — it must be wired explicitly in
+// promptfooconfig.yaml). The manifest makes the source inventory + submodule SHA
+// auditable per run so that gap is visible up front.
+//
+// IMPORTANT: this is the SOURCE inventory, NOT per-agent wiring. Which MCP servers a
+// provider actually exposes is in promptfooconfig.yaml; whether the agent actually
+// CALLED them is in the run trace (the mcp_calls / skill_calls columns). And
+// `reachable` is a best-effort endpoint ping from the seed host — "the endpoint
+// answers", which is NOT the same as "the agent had it registered".
+// ---------------------------------------------------------------------------
+function gitSha(dir) {
+  try {
+    return execSync('git rev-parse HEAD', { cwd: dir, stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return null;
+  }
+}
+
+function declaredSkills() {
+  // Prefer the Claude plugin manifest's skills list; fall back to listing skills/.
+  try {
+    const m = JSON.parse(
+      fs.readFileSync(path.join(AGENT_SKILLS_ROOT, '.claude-plugin', 'plugin.json'), 'utf8'),
+    );
+    if (Array.isArray(m.skills)) return m.skills.map((s) => path.basename(s)).sort();
+  } catch {
+    /* fall through to dir listing */
+  }
+  try {
+    return fs
+      .readdirSync(SKILLS_DIR)
+      .filter((n) => fs.existsSync(path.join(SKILLS_DIR, n, 'SKILL.md')))
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+function pluginDeclaredMcp() {
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(AGENT_SKILLS_ROOT, '.mcp.json'), 'utf8'));
+    return m.mcpServers || {};
+  } catch {
+    return {};
+  }
+}
+
+async function reachable(url) {
+  if (typeof fetch !== 'function' || !url) return null; // node < 18 (no global fetch): skip
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    const res = await fetch(url, { method: 'GET', signal: ctrl.signal });
+    return res.status < 500; // any non-5xx = the endpoint answered
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function writeManifest() {
+  const declared = pluginDeclaredMcp();
+  const mcp = {};
+  for (const [name, cfg] of Object.entries(declared)) {
+    mcp[name] =
+      cfg && cfg.url
+        ? { transport: 'http', url: cfg.url, reachable: await reachable(cfg.url) }
+        : { transport: 'stdio' };
+  }
+  const manifest = {
+    seededAt: new Date().toISOString(),
+    problem: PROBLEM,
+    techstack: TECHSTACK,
+    agentSkills: {
+      root: AGENT_SKILLS_ROOT,
+      sha: gitSha(AGENT_SKILLS_ROOT),
+      skills: declaredSkills(),
+    },
+    pluginDeclaredMcpServers: mcp,
+    note:
+      'Records the skills/MCP SOURCE (the agent-skills bundle) and its version for ' +
+      'this run — NOT per-agent wiring. The claude-agent-sdk provider does NOT ' +
+      'auto-load the plugin .mcp.json, so an MCP listed here is only actually ' +
+      'available to an agent if promptfooconfig.yaml wires it explicitly. `reachable` ' +
+      'is a seed-host endpoint ping, not proof the agent registered it. Actual ' +
+      'per-agent usage is in the run trace (mcp_calls / skill_calls).',
+  };
+  const out = path.join(HERE, 'workspaces', 'available.json');
+  fs.writeFileSync(out, JSON.stringify(manifest, null, 2) + '\n');
+  console.error(
+    `[seed] availability manifest → ${out} ` +
+      `(skills=${manifest.agentSkills.skills.length}, sha=${(manifest.agentSkills.sha || '?').slice(0, 8)}, ` +
+      `declaredMcp=${Object.keys(mcp).join(',') || 'none'})`,
+  );
+}
+
 module.exports.seed = async function seed(hookName /* , context */) {
   if (hookName !== 'beforeAll') return;
 
@@ -140,4 +249,6 @@ module.exports.seed = async function seed(hookName /* , context */) {
     seedWorkspace(agent, port);
     console.error(`[seed] ${agent}: workspace ready on port ${port}`);
   }
+
+  await writeManifest();
 };
