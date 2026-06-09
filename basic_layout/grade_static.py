@@ -227,9 +227,16 @@ def get_assert(output, context=None):
     chk('@Route("basic_layout") present',
         re.search(r'@Route\(\s*"basic_layout"', src) is not None, critical=True)
 
-    # --- Vaadin-specific (rubric says: confirm structural intent in code) ---
-    chk("uses HorizontalLayout", "HorizontalLayout" in src, critical=True)
-    chk("uses VerticalLayout", "VerticalLayout" in src, critical=True)
+    # --- Vaadin-specific (rubric: "verify by reading the source") ---
+    # NOT critical. In the source benchmark these are scored, never gated: the
+    # rubric's Vaadin-specific section is 3 of 24 points, and "uses Horizontal/
+    # VerticalLayout instead of plain divs" is ONE 1-point bullet — a working
+    # solution built from plain Divs is docked -1, not failed. So these lower the
+    # score and show as FAIL in the breakdown, but don't hard-fail the row; only
+    # @Route above stays critical (a cheap "did the agent produce the required
+    # view?" gate). Keeps phase 1 consistent with the phase-2 rubric and the original.
+    chk("uses HorizontalLayout", "HorizontalLayout" in src)
+    chk("uses VerticalLayout", "VerticalLayout" in src)
     chk("content area uses Scroller", "Scroller" in src)
 
     # No inline styles in Java (getStyle().set(...) / setAttribute("style", ...)).
