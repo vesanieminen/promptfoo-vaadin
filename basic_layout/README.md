@@ -39,11 +39,11 @@ It runs in **two phases**, both as ordinary promptfoo evals:
 
 | agentic-dx-improvement | promptfoo here |
 |---|---|
-| `run_task_local.sh` seeds a workspace and runs the solver agent | split in two: **`seed.js`** (a `beforeAll` extension) seeds the workspaces; the **native agentic providers** run the agents |
-| the solver CLIs (`codex` / `claude` with `--dangerously-…`) | promptfoo's **`openai:codex:gpt-5.5`** and **`anthropic:claude-code`** providers (the latter twice — with and without the Vaadin skills) — agentic, full file/command access, Playwright + Vaadin-docs MCP, the Vaadin skills (Claude via the agent-skills plugin, Codex via `.agents/skills/`), **model pinned** (`claude-opus-4-8` / `gpt-5.5`) but otherwise no effort/temperature tuning |
+| `run_task_local.sh` seeds a workspace and runs the solver agent | split in two: **`seed.js`** (a `beforeAll` extension) seeds the workspaces and writes the per-run `available.json` manifest; the **native agentic providers** run the agents |
+| the solver CLIs (`codex` / `claude` with `--dangerously-…`) | promptfoo's **`openai:codex:gpt-5.5`** and **`anthropic:claude-code`** providers (the latter twice — with and without the Vaadin skills + docs MCP) — agentic, full file/command access, Playwright + the Vaadin docs MCP (wired **explicitly** per provider: `claude` in `mcp.servers`, `codex` in `cli_config` — *not* via the plugin's `.mcp.json`, which the SDK doesn't auto-load), the Vaadin skills (Claude via the agent-skills plugin, Codex via `.agents/skills/`), **model pinned** (`claude-opus-4-8` / `gpt-5.5`) but otherwise no effort/temperature tuning |
 | `problems/base_prompt_vaadin.md` + the "task is in cwd" preamble | inlined as the `prompts:` block in `promptfooconfig.yaml` (kept in sync with the source file) |
 | `task.md` + reference PNGs | seeded into each workspace by `seed.js`, read by the agent from its `working_dir` |
-| rubric **Structure** + **Vaadin-specific** sections ("verify by reading the source") | **`grade_static.py`** (phase 1) — deterministic source checks: `@Route("basic_layout")`, `HorizontalLayout`/`VerticalLayout`, `Scroller`, no inline styles, no React/TSX leakage. Also emits the solver-trace columns (below). |
+| rubric **Structure** + **Vaadin-specific** sections ("verify by reading the source") | **`grade_static.py`** (phase 1) — deterministic source checks: `@Route("basic_layout")`, `HorizontalLayout`/`VerticalLayout`, `Scroller`, no inline styles, no React/TSX leakage. Only `@Route` hard-fails the row (did the agent produce the required view?); the rest *lower the score* but don't fail — matching the rubric, where e.g. Vaadin-layouts-vs-plain-`<div>`s is one point, not a gate. Also emits the solver-trace columns (below). |
 | `verify_task.sh` + `verify_prompt.md` (agentic browser grader) | **`verify.yaml`** (phase 2) — the verifier as a **provider per workspace**, prompt inlined (port-agnostic) and verdict returned as `output_format` structured output; **`grade_verdict.py`** normalizes it to the `/21` (or `/24`) score |
 | `claude-home.sh` (isolated Claude config + Playwright profile) | **gone** — the verifier is a provider now, so it needs no isolated `CLAUDE_CONFIG_DIR`; Playwright isolation is the provider's own `--isolated` MCP |
 
@@ -114,9 +114,12 @@ The phase-1 columns read straight from the solver row's provider-response metada
   override with `AGENTIC_DX_DIR`). Its `agent-skills` submodule should be populated
   (`git submodule update --init --recursive`) — the `claude` provider loads it as a
   local plugin from `../../agentic-dx-improvement/agent-skills` (the `vaadin-skills`
-  plugin: skills + the bundled Vaadin docs MCP). For **parity, the `codex` row gets
-  the same skills**: `seed.js` symlinks `workspaces/codex/.agents/skills/` →
-  `agent-skills/skills/`, and the Vaadin docs MCP is added to Codex's `cli_config`.
+  plugin) — which delivers the **skills**. The plugin also ships a `.mcp.json`
+  declaring the Vaadin **docs MCP**, but promptfoo's `claude-code` provider does
+  **not** auto-load a plugin's `.mcp.json`, so the docs MCP is wired **explicitly** in
+  the `claude` provider's `mcp.servers`. For **parity, the `codex` row gets the
+  same**: `seed.js` symlinks `workspaces/codex/.agents/skills/` → `agent-skills/skills/`
+  (skills), and the Vaadin docs MCP is added to Codex's `cli_config`.
   The **`claude-no-skills`** row deliberately gets neither (it's the baseline).
 - **The agentic provider SDKs installed where the eval can resolve them.** promptfoo
   resolves `@anthropic-ai/claude-agent-sdk` / `@openai/codex-sdk` from the *eval's*
@@ -191,8 +194,9 @@ npx promptfoo@latest eval -c basic_layout/verify.yaml          --max-concurrency
 
 `--max-concurrency 3` runs all three rows at once; safe because each has its own
 workspace and baked port (Codex `8081`, Claude `8082`, no-skills `8083`). Each run's
-workspace (the agent's modified project + logs + `verify-result.json`) lives under
-`basic_layout/workspaces/<agent>/` (gitignored, recreated each run).
+per-agent workspace (the agent's modified project + logs + `verify-result.json` +
+screenshot galleries) lives under `basic_layout/workspaces/<agent>/`, with a run-level
+`workspaces/available.json` manifest alongside (gitignored, recreated each run).
 
 ### Concurrency & isolation
 
