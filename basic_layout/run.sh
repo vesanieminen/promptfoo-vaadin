@@ -48,20 +48,20 @@
 # stdout, so the redirect captures the whole UI (and leaks the token into the file).
 #
 # Usage:
-#   bash basic_layout/run.sh                          # all rows: solve + verify, once
-#   REPEAT=3 bash basic_layout/run.sh                 # run the whole pipeline 3x
-#   bash basic_layout/run.sh --filter-providers 'claude$'   # one Claude row (see below)
+#   bash basic_layout/run.sh                  # all agent rows: solve + verify, once
+#   AGENT=claude bash basic_layout/run.sh     # only the claude row(s) — see AGENT below
+#   REPEAT=3 bash basic_layout/run.sh         # run the whole pipeline 3x
 #
-# Filtering rows — extra args pass through to BOTH phases. promptfoo's
-# --filter-providers matches a provider's id OR label, and ALL phase-2 verifiers
-# share the id `anthropic:claude-agent-sdk` (which contains "claude"), so a bare
-# `--filter-providers claude` OVER-matches in verify (pulls in verify-codex too).
-# Use ANCHORED regexes:
-#   one Claude row ........ --filter-providers 'claude$'
-#   Claude + no-skills .... --filter-providers '(verify-)?claude(-no-skills)?$'
-#   Codex only ............ --filter-providers codex     ("codex" isn't in the id, so it's clean)
-# (--filter-first-n N filters TEST CASES, not providers — there's one test per
-#  phase, so it won't reduce the rows; use --filter-providers for that.)
+# AGENT=<name>[,<name>...] (default: all) picks which agent rows to run across BOTH
+# phases, by plain name — no regex:
+#   AGENT=claude                  → claude only
+#   AGENT=claude,claude-no-skills → claude + the no-skills baseline (the skills A/B)
+#   AGENT=codex                   → codex only
+# Valid names: codex, claude, claude-no-skills. (Under the hood this becomes an
+# anchored --filter-providers, because the phase-2 verifiers all share the id
+# anthropic:claude-agent-sdk — so a bare name would over-match the verify rows. You
+# can still pass --filter-providers '<regex>' yourself instead of AGENT if you like;
+# any extra args are forwarded to BOTH phases.)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -126,6 +126,27 @@ fi
 ( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline ) || true
 
 REPEAT="${REPEAT:-1}"
+
+# AGENT=<name>[,<name>...] → run only those agent rows. Translated to an anchored
+# --filter-providers and prepended to the args forwarded to BOTH phases. Anchored at
+# the end ('<name>$') because each provider label ENDS with its agent name (solver
+# `claude`, verifier `verify-claude`) while the shared verifier id
+# `anthropic:claude-agent-sdk` does NOT — so a bare name would over-match verify.
+# `set --` injection keeps this bash-3.2 safe (no empty-array expansion under set -u).
+if [ -n "${AGENT:-}" ]; then
+  AGENT="${AGENT// /}"              # tolerate spaces, e.g. AGENT="claude, codex"
+  _known="codex claude claude-no-skills"
+  IFS=',' read -ra _want <<< "$AGENT"
+  for _a in "${_want[@]}"; do
+    case " $_known " in
+      *" $_a "*) ;;
+      *) echo "[run] ERROR: unknown AGENT '$_a' (valid: $_known; comma-separate for several)." >&2; exit 1 ;;
+    esac
+  done
+  _only="(${AGENT//,/|})\$"          # e.g. claude,codex -> (claude|codex)$
+  set -- --filter-providers "$_only" "$@"
+  echo "[run] AGENT=$AGENT → running only those row(s) in both phases (--filter-providers '$_only')" >&2
+fi
 
 # One full pipeline pass: PHASE 1 (solve) then PHASE 2 (verify). --no-cache is
 # REQUIRED — the agentic providers cache by prompt, so without it a re-run replays
