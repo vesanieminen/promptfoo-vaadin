@@ -1,21 +1,25 @@
-// seed.js — promptfoo `beforeAll` extension hook for the basic_layout eval.
+// seed.js — promptfoo `beforeAll` extension hook for the basic_layout eval
+// (PHASE 1: solve). Phase 2's grading-time prep lives in seed_verify.js.
 //
-// Replaces the seeding half of the old solve.sh and all of claude-home.sh.
-// Before the eval runs, it (re)creates one fresh, writable workspace per solver
-// provider (codex, claude) from the agentic-dx-improvement sources:
+// Replaces the seeding half of the old solve.sh. Before the eval runs, it
+// (re)creates one fresh, writable workspace per solver provider
+// (codex, claude, claude-no-skills) from the agentic-dx-improvement sources:
 //   - copies task.md + the reference PNGs and the Vaadin skeleton into app/,
-//   - strips rubric.md so the solver never sees the grading criteria,
-//   - bakes a per-provider server port so the two rows never collide on 8080
-//     when run with --max-concurrency 2,
-//   - builds an isolated Claude config dir for that workspace's rubric verifier
-//     (Playwright MCP made --isolated so parallel verifiers don't deadlock).
+//   - strips rubric.md so the solver never sees the grading criteria
+//     (seed_verify.js restores it before phase 2),
+//   - bakes a per-provider server port so the rows never collide on 8080
+//     when run with --max-concurrency 3.
+//
+// The old per-workspace .claude-home is gone: the rubric verifier is now a
+// promptfoo PROVIDER (verify.yaml), not a subprocess, so it needs no isolated
+// CLAUDE_CONFIG_DIR — see docs/ADR-verifier-as-provider.md.
 //
 // Wired in promptfooconfig.yaml as:  extensions: ['file://seed.js:seed']
 // promptfoo invokes every extension for every hook using the legacy convention
 // seed(hookName, context); we act only on beforeAll and return nothing.
 //
 // Source location is the sibling agentic-dx-improvement checkout by default;
-// override with AGENTIC_DX_DIR (and BENCH_CLAUDE_HOME for the Claude home).
+// override with AGENTIC_DX_DIR.
 
 const fs = require('fs');
 const path = require('path');
@@ -27,8 +31,6 @@ const AGENTIC_DX_DIR = process.env.AGENTIC_DX_DIR
   : path.resolve(REPO_ROOT, '..', 'agentic-dx-improvement');
 const PROBLEM = process.env.PROBLEM || 'basic_layout';
 const TECHSTACK = process.env.TECHSTACK || 'vaadin';
-const BENCH_CLAUDE_HOME =
-  process.env.BENCH_CLAUDE_HOME || path.join(AGENTIC_DX_DIR, '.bench-claude-home');
 
 const PROBLEM_DIR = path.join(AGENTIC_DX_DIR, 'problems', PROBLEM);
 const SKELETON_DIR = path.join(AGENTIC_DX_DIR, 'skeletons', TECHSTACK);
@@ -40,8 +42,11 @@ const SKILLS_DIR = path.join(AGENTIC_DX_DIR, 'agent-skills', 'skills');
 
 // One workspace per solver provider, each on a dedicated port. The matching
 // provider `working_dir` and the graders' provider->workspace map use the same
-// names; keep them in sync with promptfooconfig.yaml.
-const SOLVERS = { codex: 8081, claude: 8082 };
+// names; keep them in sync with promptfooconfig.yaml (and seed_verify.js).
+//   claude-no-skills is the BASELINE row: same agentic Claude solver, but WITHOUT
+//   the Vaadin agent-skills plugin / docs MCP — it isolates how much the skills
+//   actually move the rubric.
+const SOLVERS = { codex: 8081, claude: 8082, 'claude-no-skills': 8083 };
 
 // The cwd preamble run_task_local.sh prepends to the base prompt. prompt.txt is
 // what the verifier reads as "the task"; the run-environment note lives only in
@@ -87,10 +92,6 @@ function seedWorkspace(agent, port) {
     CWD_PREAMBLE + fs.readFileSync(BASE_PROMPT_FILE, 'utf8'),
   );
 
-  // Isolated Claude home for THIS workspace's rubric verifier (needed for BOTH
-  // rows — the verifier is always Claude, even when grading Codex's solution).
-  buildClaudeHome(ws);
-
   // Codex has no plugin loader, so the agent-skills plugin can't deliver the
   // Vaadin skills the way it does for the Claude row. Install them into Codex's
   // own discovery location instead, for an apples-to-apples comparison.
@@ -120,48 +121,6 @@ function seedCodexSkills(ws) {
   fs.mkdirSync(path.dirname(dest), { recursive: true }); // the `.agents` parent
   rmrf(dest); // workspace is fresh, but stay idempotent
   fs.symlinkSync(SKILLS_DIR, dest, 'dir'); // SKILLS_DIR is absolute
-}
-
-// Mirrors the old claude-home.sh: copy the bench home (Vaadin plugin + base
-// config) and rewrite the Playwright MCP to an in-memory (--isolated) profile
-// with a per-workspace output dir, so concurrent verifiers can't deadlock on a
-// shared browser profile's singleton lock.
-function buildClaudeHome(ws) {
-  const dest = path.join(ws, '.claude-home');
-  rmrf(dest);
-  fs.mkdirSync(dest, { recursive: true });
-  if (fs.existsSync(BENCH_CLAUDE_HOME)) {
-    fs.cpSync(BENCH_CLAUDE_HOME, dest, { recursive: true });
-  } else {
-    console.error(
-      `[seed] bench Claude home not found at ${BENCH_CLAUDE_HOME} (set BENCH_CLAUDE_HOME)`,
-    );
-  }
-  const cfgPath = path.join(dest, '.claude.json');
-  let cfg = {};
-  try {
-    if (fs.existsSync(cfgPath)) cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-  } catch {
-    cfg = {};
-  }
-  if (!cfg || typeof cfg !== 'object') cfg = {};
-  cfg.mcpServers = cfg.mcpServers || {};
-  cfg.mcpServers.playwright = {
-    type: 'stdio',
-    command: 'npx',
-    args: [
-      '--yes',
-      '@playwright/mcp@latest',
-      '--browser',
-      'chromium',
-      '--headless',
-      '--isolated',
-      '--output-dir',
-      path.join(ws, '.pw-verify'),
-    ],
-    env: {},
-  };
-  fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
 }
 
 module.exports.seed = async function seed(hookName /* , context */) {

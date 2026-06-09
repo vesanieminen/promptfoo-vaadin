@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # Quick auth smoke test — confirms Claude works for BOTH paths the basic_layout
 # benchmark needs, in well under a minute (no Maven / server / Playwright):
-#   1. EVAL / solver  — the agentic anthropic:claude-code provider (your login)
-#   2. VERIFICATION   — `claude` under an isolated CLAUDE_CONFIG_DIR (needs token)
+#   1. EVAL / solver  — the agentic anthropic:claude-code provider (your login or token)
+#   2. VERIFICATION   — `claude` on the path you'll actually run on: the DEFAULT
+#                       config dir (Keychain login) when no token is set, else an
+#                       isolated CLAUDE_CONFIG_DIR that exercises the token.
 #
 # Auth is injected into THIS process only (never your rc): $CLAUDE_CODE_OAUTH_TOKEN,
-# else basic_layout/.bench-token. With no token the test still runs — the solver
-# passes (via your Keychain login) and the verification assertion fails with a
-# clear "provide a token" message, which is itself a useful diagnostic.
+# else basic_layout/.bench-token. A token is OPTIONAL — with none, both assertions
+# pass via your Keychain login (the verifier is a provider now, not an isolated-config
+# subprocess; see docs/ADR-verifier-as-provider.md).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -33,9 +35,10 @@ if [ -n "$TOK" ]; then
     exit 1
   fi
 else
-  echo "[smoke] auth: NO token → solver/eval should PASS (Keychain); verification should FAIL." >&2
-  echo "[smoke]       To test verification: run 'claude setup-token' (interactive), copy the" >&2
-  echo "[smoke]       sk-ant-oat01-... value, then: printf %s 'sk-ant-oat01-...' > $TOKEN_FILE" >&2
+  echo "[smoke] auth: NO token → testing your Claude Code login (Keychain). BOTH assertions" >&2
+  echo "[smoke]       should PASS if you're logged in ('claude /login'). To exercise the token" >&2
+  echo "[smoke]       path instead: 'claude setup-token' (interactive), copy the sk-ant-oat01-..." >&2
+  echo "[smoke]       value, then: printf %s 'sk-ant-oat01-...' > $TOKEN_FILE" >&2
 fi
 
 exec npx promptfoo@latest eval -c smoke/promptfooconfig.yaml --no-cache "$@"
