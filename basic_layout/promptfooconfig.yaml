@@ -112,7 +112,7 @@ providers:
       allow_dangerously_skip_permissions: true
       allow_all_tools: true
       setting_sources: []               # ignore the user's personal settings/plugins → clean benchmark
-      plugins:                          # the Vaadin agent-skills plugin (vaadin-skills: layouts, responsive-layouts, …; bundles the Vaadin docs MCP)
+      plugins:                          # the Vaadin agent-skills plugin — provides the vaadin-skills (layouts, responsive-layouts, …)
         - type: local
           path: ../../agentic-dx-improvement/agent-skills
       mcp:
@@ -120,8 +120,16 @@ providers:
           - name: playwright
             command: npx
             args: ["--yes", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--isolated"]
+          # Vaadin docs MCP, declared EXPLICITLY. The agent-skills plugin ships a root
+          # .mcp.json with this server, but the claude-agent-sdk provider does NOT
+          # auto-discover it: the skills load via `plugins:`, the MCP does not. Verified
+          # by a with-skills probe — zero mcp__vaadin calls, agent reported the server
+          # "not connected". So we wire it here, mirroring how the codex row does it in
+          # cli_config. (claude-no-skills deliberately omits it — see below.)
+          - name: vaadin
+            url: "https://mcp.vaadin.com/docs"
 
-  - id: anthropic:claude-code           # BASELINE — same solver as `claude`, MINUS the Vaadin skills
+  - id: anthropic:claude-code           # BASELINE — same solver as `claude`, MINUS the Vaadin skills AND the docs MCP
     label: claude-no-skills
     config:
       apiKeyRequired: false
