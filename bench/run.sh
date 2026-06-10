@@ -204,6 +204,11 @@ run_pipeline() {
   echo "[run] PHASE 1/2 — solve  (promptfooconfig.js)" >&2
   PROBLEM="$prob" npx promptfoo@latest eval -c bench/promptfooconfig.js \
     --max-concurrency "$MAXC" --no-cache "$@" || true
+  # Attach each solver's Playwright screenshots (already saved in its workspace root)
+  # to its row in the just-written solve eval, so they render as clickable images in
+  # `promptfoo view`. Purely post-run: no model call, no provider/grader change (see
+  # attach_shots.js). `|| true` so a screenshot-attach hiccup never fails the run.
+  PROBLEM="$prob" node bench/attach_shots.js || true
   echo "[run] PHASE 2/2 — verify (verify.js)" >&2
   PROBLEM="$prob" npx promptfoo@latest eval -c bench/verify.js \
     --max-concurrency "$MAXC" --no-cache "$@" || true
