@@ -1,6 +1,6 @@
 # ADR: The rubric verifier is a provider, not an assertion
 
-**Status:** accepted · **Date:** 2026-06-08 · **Scope:** `basic_layout/`
+**Status:** accepted · **Date:** 2026-06-08 · **Scope:** `bench/`
 
 ## Context
 

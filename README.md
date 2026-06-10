@@ -6,7 +6,7 @@ description — modelled on the v25.2 starter (Spring Boot + Vaadin Flow; views 
 `VerticalLayout`, are annotated with `@Route`, and give components stable ids via
 `setId(...)`).
 
-This is the simple, one-shot sibling of [`basic_layout/`](basic_layout/README.md) —
+This is the simple, one-shot sibling of [`bench/`](bench/README.md) —
 the full *agentic* benchmark (the agents actually solve a task and are rubric-graded).
 See that README for its (heavier) setup.
 

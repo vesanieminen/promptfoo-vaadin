@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Run the basic_layout benchmark — PHASE 1 (solve) then PHASE 2 (verify).
+# Run the agentic-dx benchmark — for each PROBLEM, PHASE 1 (solve) then PHASE 2
+# (verify). By default it runs ALL problems (basic_layout, basic_form, md_ui_spec);
+# narrow with PROBLEM= (see below). Despite the path, this dir hosts all problems.
 #
-# What it does:
-#   1. PHASE 1  — promptfooconfig.yaml: the SOLVERS (codex, claude, claude-no-skills)
-#      solve the task into workspaces/<agent>/app (seed.js re-seeds fresh each run).
-#   2. PHASE 2  — verify.yaml: one VERIFIER provider per workspace grades the
-#      solution against the rubric and returns a structured verdict.
-#   Both phases are separate promptfoo evals; `promptfoo view` shows them together.
+# What it does, per problem:
+#   1. PHASE 1  — promptfooconfig.js: the SOLVERS (codex, claude, claude-no-skills)
+#      solve the task into workspaces/<problem>/<agent>/app (seed.js re-seeds fresh).
+#   2. PHASE 2  — verify.js: one VERIFIER provider per workspace grades the solution
+#      against the rubric and returns a structured verdict.
+#   Each phase is a separate promptfoo eval; `promptfoo view` shows them all together.
 #
 # Auth (optional in subscription mode):
 #   Both phases are anthropic:claude-agent-sdk / claude-code / codex providers, so
@@ -38,19 +40,25 @@
 # Credential source (first hit wins):
 #   1. $ANTHROPIC_API_KEY        already set in this shell  → API-key mode
 #   2. $CLAUDE_CODE_OAUTH_TOKEN  already set in this shell  → subscription mode
-#   3. basic_layout/.bench-token (gitignored; ONE line — just the sk-ant-... value;
+#   3. bench/.bench-token (gitignored; ONE line — just the sk-ant-... value;
 #      EITHER kind, mode auto-detected by its sk-ant-api / sk-ant-oat prefix)
 #
 # Create .bench-token by writing ONLY the bare value, e.g.:
-#     printf %s 'sk-ant-api03-...' > basic_layout/.bench-token   # API key  (NEW)
-#     printf %s 'sk-ant-oat01-...' > basic_layout/.bench-token   # subscription (OLD)
+#     printf %s 'sk-ant-api03-...' > bench/.bench-token   # API key  (NEW)
+#     printf %s 'sk-ant-oat01-...' > bench/.bench-token   # subscription (OLD)
 # Do NOT redirect `claude setup-token` into the file — its interactive UI prints to
 # stdout, so the redirect captures the whole UI (and leaks the token into the file).
 #
 # Usage:
-#   bash basic_layout/run.sh                  # all agent rows: solve + verify, once
-#   AGENT=claude bash basic_layout/run.sh     # only the claude row(s) — see AGENT below
-#   REPEAT=3 bash basic_layout/run.sh         # run the whole pipeline 3x
+#   bash bench/run.sh                          # all problems × all agents, once
+#   PROBLEM=basic_form bash bench/run.sh        # one problem (see PROBLEM below)
+#   PROBLEM=basic_form,md_ui_spec bash bench/run.sh
+#   AGENT=claude bash bench/run.sh              # only the claude row(s) — see AGENT
+#   REPEAT=3 bash bench/run.sh                  # run the whole thing 3x
+#
+# PROBLEM=<name>[,<name>...] (default: all) — which problem(s) to run; each gets its
+#   own solve+verify pipeline and namespaced workspaces. Valid: basic_layout,
+#   basic_form, md_ui_spec.
 #
 # AGENT=<name>[,<name>...] (default: all) picks which agent rows to run across BOTH
 # phases, by plain name — no regex:
@@ -67,7 +75,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-TOKEN_FILE="basic_layout/.bench-token"
+TOKEN_FILE="bench/.bench-token"
 
 # 1) Resolve ONE credential and its source label (first hit wins). The user picks
 #    the auth mode by which credential they supply (see header).
@@ -123,9 +131,20 @@ fi
 
 # Warm the shared Maven cache once (cheap if already warm; avoids cold-download
 # races between the concurrent solvers). ~/.m2 is the one un-isolated resource.
-( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline ) || true
+# Honour AGENTIC_DX_DIR so it resolves from a worktree too (not just the sibling).
+( cd "${AGENTIC_DX_DIR:-../agentic-dx-improvement}/skeletons/vaadin" && mvn -q dependency:go-offline ) || true
 
 REPEAT="${REPEAT:-1}"
+# Per-phase --max-concurrency (default 3 = all agent rows at once). Lower it (e.g.
+# MAX_CONCURRENCY=2) to ease load on the machine / browsers / shared ~/.m2.
+MAXC="${MAX_CONCURRENCY:-3}"
+
+# Per-ROW wall-clock ceiling. promptfoo's per-test timeout defaults to 0 (OFF), which
+# lets a wedged agentic subprocess block the whole run indefinitely (observed: a solve
+# agent finished but its SDK subprocess never exited, stalling the run 25 min until
+# killed by hand). Bound it so a hung row is recorded as a timeout error and the run
+# moves on. 45 min/row is generous — real solves run ~7-35 min. Set =0 to disable.
+export PROMPTFOO_EVAL_TIMEOUT_MS="${PROMPTFOO_EVAL_TIMEOUT_MS:-2700000}"
 
 # AGENT=<name>[,<name>...] → run only those agent rows. Translated to an anchored
 # --filter-providers and prepended to the args forwarded to BOTH phases. Anchored at
@@ -148,28 +167,61 @@ if [ -n "${AGENT:-}" ]; then
   echo "[run] AGENT=$AGENT → running only those row(s) in both phases (--filter-providers '$_only')" >&2
 fi
 
-# One full pipeline pass: PHASE 1 (solve) then PHASE 2 (verify). --no-cache is
-# REQUIRED — the agentic providers cache by prompt, so without it a re-run replays
-# the first run instead of actually solving/verifying. --max-concurrency 3 runs all
-# three rows in parallel; each has its own workspace, port, and isolated browser,
-# so this is safe. Each phase is `|| true` so a failing/low-scoring row never stops
-# the others or the verify phase — the signal lives in `promptfoo view`, not the
-# wrapper's exit code.
+# PROBLEM=<name>[,<name>...] (default: all, in canonical order) selects which
+# problem(s) to run. Each selected problem runs its OWN solve+verify pipeline against
+# its OWN namespaced workspaces / ports (8081..8089), so all problems show up
+# side-by-side in `promptfoo view`. Valid names: basic_layout, basic_form, md_ui_spec.
+# The configs/seed/graders read a SINGLE PROBLEM per eval — run_pipeline sets it per
+# call — so we consume the selector here and unset it to avoid leaking a comma-list.
+_KNOWN_PROBLEMS="basic_layout basic_form md_ui_spec"
+if [ -n "${PROBLEM:-}" ]; then
+  _sel="${PROBLEM// /}"                 # tolerate spaces, e.g. PROBLEM="basic_form, md_ui_spec"
+  IFS=',' read -ra _PROBLEMS <<< "$_sel"
+  for _p in "${_PROBLEMS[@]}"; do
+    case " $_KNOWN_PROBLEMS " in
+      *" $_p "*) ;;
+      *) echo "[run] ERROR: unknown PROBLEM '$_p' (valid: $_KNOWN_PROBLEMS; comma-separate for several)." >&2; exit 1 ;;
+    esac
+  done
+  echo "[run] PROBLEM=$_sel → running only those problem(s)" >&2
+else
+  # shellcheck disable=SC2206
+  _PROBLEMS=( $_KNOWN_PROBLEMS )        # all, in canonical order
+fi
+unset PROBLEM                           # run_pipeline re-exports a single PROBLEM per call
+
+# One full pipeline pass for ONE problem: PHASE 1 (solve) then PHASE 2 (verify),
+# with PROBLEM exported so the configs/seed/graders target that problem's namespaced
+# workspaces/ports. --no-cache is REQUIRED — the agentic providers cache by prompt,
+# so without it a re-run replays the first run instead of actually solving/verifying.
+# --max-concurrency 3 runs all three agent rows in parallel; each has its own
+# workspace, port, and isolated browser, so this is safe. Each phase is `|| true` so
+# a failing/low-scoring row never stops the others or the verify phase — the signal
+# lives in `promptfoo view`, not the wrapper's exit code.
 run_pipeline() {
-  echo "[run] PHASE 1/2 — solve  (promptfooconfig.yaml)" >&2
-  npx promptfoo@latest eval -c basic_layout/promptfooconfig.yaml \
-    --max-concurrency 3 --no-cache "$@" || true
-  echo "[run] PHASE 2/2 — verify (verify.yaml)" >&2
-  npx promptfoo@latest eval -c basic_layout/verify.yaml \
-    --max-concurrency 3 --no-cache "$@" || true
+  local prob="$1"; shift
+  echo "[run] ===== problem: $prob =====" >&2
+  echo "[run] PHASE 1/2 — solve  (promptfooconfig.js)" >&2
+  PROBLEM="$prob" npx promptfoo@latest eval -c bench/promptfooconfig.js \
+    --max-concurrency "$MAXC" --no-cache "$@" || true
+  echo "[run] PHASE 2/2 — verify (verify.js)" >&2
+  PROBLEM="$prob" npx promptfoo@latest eval -c bench/verify.js \
+    --max-concurrency "$MAXC" --no-cache "$@" || true
+}
+
+# Run the selected problems in sequence (each is its own solve+verify pipeline).
+run_selected() {
+  for _prob in "${_PROBLEMS[@]}"; do
+    run_pipeline "$_prob" "$@"
+  done
 }
 
 if [ "$REPEAT" -le 1 ]; then
-  run_pipeline "$@"
+  run_selected "$@"
 else
   for i in $(seq 1 "$REPEAT"); do
     echo "[run] ===== repeat $i/$REPEAT =====" >&2
-    run_pipeline "$@"
+    run_selected "$@"
   done
 fi
 

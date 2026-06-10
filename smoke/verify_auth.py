@@ -63,7 +63,7 @@ def get_assert(output, context=None):
                 "`claude setup-token`." if token_set else
                 "Not logged in to Claude Code. Run `claude /login` — or use token "
                 "mode (export CLAUDE_CODE_OAUTH_TOKEN, or put a token in "
-                "basic_layout/.bench-token and run via bash smoke/run.sh).")
+                "bench/.bench-token and run via bash smoke/run.sh).")
         return {"pass": False, "score": 0.0,
                 "reason": "VERIFICATION auth FAILED [%s] — %s | claude: %s"
                           % (mode, hint, out[:200])}
