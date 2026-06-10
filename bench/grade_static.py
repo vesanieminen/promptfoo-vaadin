@@ -37,7 +37,7 @@ import json
 import os
 import re
 
-_HERE = os.path.dirname(os.path.abspath(__file__))  # promptfoo/basic_layout (the bench dir)
+_HERE = os.path.dirname(os.path.abspath(__file__))  # promptfoo/bench (the bench dir)
 
 # The problem this row belongs to. run.sh sets PROBLEM per problem; the default
 # keeps a bare phase-1 run scoring the original basic_layout task.

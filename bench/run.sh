@@ -40,21 +40,21 @@
 # Credential source (first hit wins):
 #   1. $ANTHROPIC_API_KEY        already set in this shell  → API-key mode
 #   2. $CLAUDE_CODE_OAUTH_TOKEN  already set in this shell  → subscription mode
-#   3. basic_layout/.bench-token (gitignored; ONE line — just the sk-ant-... value;
+#   3. bench/.bench-token (gitignored; ONE line — just the sk-ant-... value;
 #      EITHER kind, mode auto-detected by its sk-ant-api / sk-ant-oat prefix)
 #
 # Create .bench-token by writing ONLY the bare value, e.g.:
-#     printf %s 'sk-ant-api03-...' > basic_layout/.bench-token   # API key  (NEW)
-#     printf %s 'sk-ant-oat01-...' > basic_layout/.bench-token   # subscription (OLD)
+#     printf %s 'sk-ant-api03-...' > bench/.bench-token   # API key  (NEW)
+#     printf %s 'sk-ant-oat01-...' > bench/.bench-token   # subscription (OLD)
 # Do NOT redirect `claude setup-token` into the file — its interactive UI prints to
 # stdout, so the redirect captures the whole UI (and leaks the token into the file).
 #
 # Usage:
-#   bash basic_layout/run.sh                          # all problems × all agents, once
-#   PROBLEM=basic_form bash basic_layout/run.sh        # one problem (see PROBLEM below)
-#   PROBLEM=basic_form,md_ui_spec bash basic_layout/run.sh
-#   AGENT=claude bash basic_layout/run.sh              # only the claude row(s) — see AGENT
-#   REPEAT=3 bash basic_layout/run.sh                  # run the whole thing 3x
+#   bash bench/run.sh                          # all problems × all agents, once
+#   PROBLEM=basic_form bash bench/run.sh        # one problem (see PROBLEM below)
+#   PROBLEM=basic_form,md_ui_spec bash bench/run.sh
+#   AGENT=claude bash bench/run.sh              # only the claude row(s) — see AGENT
+#   REPEAT=3 bash bench/run.sh                  # run the whole thing 3x
 #
 # PROBLEM=<name>[,<name>...] (default: all) — which problem(s) to run; each gets its
 #   own solve+verify pipeline and namespaced workspaces. Valid: basic_layout,
@@ -75,7 +75,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-TOKEN_FILE="basic_layout/.bench-token"
+TOKEN_FILE="bench/.bench-token"
 
 # 1) Resolve ONE credential and its source label (first hit wins). The user picks
 #    the auth mode by which credential they supply (see header).
@@ -194,10 +194,10 @@ run_pipeline() {
   local prob="$1"; shift
   echo "[run] ===== problem: $prob =====" >&2
   echo "[run] PHASE 1/2 — solve  (promptfooconfig.js)" >&2
-  PROBLEM="$prob" npx promptfoo@latest eval -c basic_layout/promptfooconfig.js \
+  PROBLEM="$prob" npx promptfoo@latest eval -c bench/promptfooconfig.js \
     --max-concurrency "$MAXC" --no-cache "$@" || true
   echo "[run] PHASE 2/2 — verify (verify.js)" >&2
-  PROBLEM="$prob" npx promptfoo@latest eval -c basic_layout/verify.js \
+  PROBLEM="$prob" npx promptfoo@latest eval -c bench/verify.js \
     --max-concurrency "$MAXC" --no-cache "$@" || true
 }
 

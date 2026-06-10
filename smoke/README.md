@@ -24,7 +24,7 @@ bash smoke/run.sh
 ```
 
 The wrapper injects a token into the bench process only — and only if you have one
-(from `$CLAUDE_CODE_OAUTH_TOKEN`, else `basic_layout/.bench-token`), never your rc
+(from `$CLAUDE_CODE_OAUTH_TOKEN`, else `bench/.bench-token`), never your rc
 files. With no token it tests your login.
 
 ### Reading the result
@@ -47,7 +47,7 @@ To run in **token mode** (e.g. API-key/subscription billing, or a login-less CI 
 # setup-token with `>` — its UI prints to stdout, so the file would capture the
 # whole UI (and leak the token), not just the token.
 claude setup-token
-printf %s 'sk-ant-oat01-...' > basic_layout/.bench-token   # gitignored, one time
+printf %s 'sk-ant-oat01-...' > bench/.bench-token   # gitignored, one time
 bash smoke/run.sh
 ```
 

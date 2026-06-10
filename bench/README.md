@@ -3,8 +3,8 @@
 A [promptfoo](https://www.promptfoo.dev/) port of the
 [`agentic-dx-improvement`](../../agentic-dx-improvement) benchmark.
 
-> **Directory name.** This dir is still called `basic_layout/` for history, but it
-> now hosts **all** the benchmark problems, not just `basic_layout`.
+> **Directory.** Lives in `bench/` (renamed from `basic_layout/`, which it outgrew
+> once it hosted all three problems). `basic_layout` lives on as one of those problems.
 
 It runs **three problems** (each a Vaadin Flow task, starting from the same Vaadin
 skeleton, graded against its own `rubric.md`):
@@ -85,7 +85,7 @@ A new problem is a **drop-in** — no edits to the configs, the seed hooks, or
    and example below). *Optional:* skip it and phase 1 degrades to just the shared
    hygiene checks (with a note) — phase-2 rubric grading still works fully.
 
-4. **Run it:** `PROBLEM=<name> bash basic_layout/run.sh` (or add `<name>` to a
+4. **Run it:** `PROBLEM=<name> bash bench/run.sh` (or add `<name>` to a
    comma-list, or just run with no `PROBLEM` to include it in the all-problems sweep).
 
 **The `CheckCtx` your `run_checks(ctx)` receives** (built by `grade_static.py` from
@@ -220,7 +220,7 @@ The phase-1 columns read straight from the solver row's provider-response metada
     machine/CI with no Keychain login; mint it with `claude setup-token`.
 
   Source order (first hit wins): `$ANTHROPIC_API_KEY`, `$CLAUDE_CODE_OAUTH_TOKEN`,
-  then `basic_layout/.bench-token` (one line; mode auto-detected by prefix). If none
+  then `bench/.bench-token` (one line; mode auto-detected by prefix). If none
   is found, `run.sh` warns and relies on your login.
 - JDK 25 + Maven on `PATH`, Node 20.20+/22.22+, and network access (Maven
   downloads, browser).
@@ -242,17 +242,17 @@ resolve relative to each config's directory):
 # RECOMMENDED — the wrapper warms the Maven cache, then for each PROBLEM runs PHASE 1
 # (solve) then PHASE 2 (verify) with --no-cache, and (optionally) injects ONE
 # run-scoped Claude credential into the bench PROCESS ONLY. Never touches your rc files.
-bash basic_layout/run.sh                          # ALL problems × all agents
+bash bench/run.sh                          # ALL problems × all agents
 npx promptfoo@latest view                         # every problem's solve + verify rows, side by side
 
-PROBLEM=basic_form bash basic_layout/run.sh        # just one problem
-PROBLEM=basic_form,md_ui_spec bash basic_layout/run.sh
-AGENT=claude,claude-no-skills bash basic_layout/run.sh   # narrow the agent rows (the skills A/B)
+PROBLEM=basic_form bash bench/run.sh        # just one problem
+PROBLEM=basic_form,md_ui_spec bash bench/run.sh
+AGENT=claude,claude-no-skills bash bench/run.sh   # narrow the agent rows (the skills A/B)
 
 # Variance: re-run the whole thing N times (each iteration re-seeds fresh workspaces
 # and shows as its own run in `promptfoo view`). Each row is a ~30-min agentic pass,
 # and the default is 3 problems × 3 agents × 2 phases — so raise REPEAT knowingly.
-REPEAT=3 bash basic_layout/run.sh
+REPEAT=3 bash bench/run.sh
 ```
 
 Manual equivalent (run one problem's two phases yourself — set `PROBLEM` so the
@@ -264,8 +264,8 @@ configs/seed/graders all target the same problem):
 ( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline )  # warm ~/.m2 once
 # --no-cache is REQUIRED: the agentic providers cache by prompt, so without it a
 # re-run replays the first run instead of actually solving/verifying.
-PROBLEM=basic_form npx promptfoo@latest eval -c basic_layout/promptfooconfig.js --max-concurrency 3 --no-cache  # PHASE 1
-PROBLEM=basic_form npx promptfoo@latest eval -c basic_layout/verify.js          --max-concurrency 3 --no-cache  # PHASE 2
+PROBLEM=basic_form npx promptfoo@latest eval -c bench/promptfooconfig.js --max-concurrency 3 --no-cache  # PHASE 1
+PROBLEM=basic_form npx promptfoo@latest eval -c bench/verify.js          --max-concurrency 3 --no-cache  # PHASE 2
 ```
 
 `--max-concurrency 3` runs all three agent rows at once; safe because each has its
@@ -273,7 +273,7 @@ own workspace and baked port. Ports are assigned per `(problem, agent)` from
 `bench.js` (`8081..8089`): `basic_layout` `8081/8082/8083`, `basic_form`
 `8084/8085/8086`, `md_ui_spec` `8087/8088/8089`. Each run's workspace (the agent's
 modified project + logs + `verify-result.json`) lives under
-`basic_layout/workspaces/<problem>/<agent>/` (gitignored, recreated each run).
+`bench/workspaces/<problem>/<agent>/` (gitignored, recreated each run).
 
 ### Concurrency & isolation
 

@@ -42,7 +42,7 @@ import json
 import os
 import re
 
-_HERE = os.path.dirname(os.path.abspath(__file__))            # promptfoo/basic_layout (the bench dir)
+_HERE = os.path.dirname(os.path.abspath(__file__))            # promptfoo/bench (the bench dir)
 _PASS_THRESHOLD = float(os.environ.get("RUBRIC_PASS_THRESHOLD", "0.6"))
 # The problem this row belongs to (run.sh sets PROBLEM per problem; default basic_layout).
 _PROBLEM = os.environ.get("PROBLEM", "basic_layout")

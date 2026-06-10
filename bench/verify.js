@@ -13,9 +13,9 @@
 // restored, and grade_verdict.py sums whatever sections the verdict reports and
 // normalizes (so a 21/24, 23/31, or 41/48 rubric all work with no code change).
 //
-// Run via the wrapper (does phase 1 then phase 2 for each problem):  bash basic_layout/run.sh
+// Run via the wrapper (does phase 1 then phase 2 for each problem):  bash bench/run.sh
 // Or directly (workspaces must already exist from a phase-1 run of the SAME problem):
-//   PROBLEM=basic_form npx promptfoo@latest eval -c basic_layout/verify.js --max-concurrency 3 --no-cache
+//   PROBLEM=basic_form npx promptfoo@latest eval -c bench/verify.js --max-concurrency 3 --no-cache
 
 const bench = require('./bench.js');
 

@@ -18,8 +18,8 @@
 // gate + solver-trace columns).
 //
 // Run from the repo root via the wrapper (warms Maven, --no-cache, run-scoped auth):
-//   bash basic_layout/run.sh                 # all problems × all agents
-//   PROBLEM=basic_form bash basic_layout/run.sh
+//   bash bench/run.sh                 # all problems × all agents
+//   PROBLEM=basic_form bash bench/run.sh
 //   npx promptfoo@latest view
 //
 // Auth (run.sh handles this): both the SOLVER and the rubric VERIFIER need Claude

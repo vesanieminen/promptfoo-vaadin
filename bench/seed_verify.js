@@ -23,7 +23,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const bench = require('./bench.js'); // SOLVERS, workspaceRel, currentProblem
 
-const HERE = __dirname; // promptfoo/basic_layout (the bench dir)
+const HERE = __dirname; // promptfoo/bench (the bench dir)
 const REPO_ROOT = path.dirname(HERE); // promptfoo
 const AGENTIC_DX_DIR = process.env.AGENTIC_DX_DIR
   ? path.resolve(process.env.AGENTIC_DX_DIR)

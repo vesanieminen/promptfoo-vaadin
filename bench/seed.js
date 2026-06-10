@@ -1,4 +1,4 @@
-// seed.js — promptfoo `beforeAll` extension hook for the basic_layout eval
+// seed.js — promptfoo `beforeAll` extension hook for the agentic-dx bench (all problems)
 // (PHASE 1: solve). Phase 2's grading-time prep lives in seed_verify.js.
 //
 // Replaces the seeding half of the old solve.sh. Before the eval runs, it
@@ -35,7 +35,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const bench = require('./bench.js'); // SOLVERS, portFor, workspaceRel, currentProblem
 
-const HERE = __dirname; // promptfoo/basic_layout (the bench dir)
+const HERE = __dirname; // promptfoo/bench (the bench dir)
 const REPO_ROOT = path.dirname(HERE); // promptfoo
 const AGENTIC_DX_DIR = process.env.AGENTIC_DX_DIR
   ? path.resolve(process.env.AGENTIC_DX_DIR)
