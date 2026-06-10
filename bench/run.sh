@@ -131,12 +131,20 @@ fi
 
 # Warm the shared Maven cache once (cheap if already warm; avoids cold-download
 # races between the concurrent solvers). ~/.m2 is the one un-isolated resource.
-( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline ) || true
+# Honour AGENTIC_DX_DIR so it resolves from a worktree too (not just the sibling).
+( cd "${AGENTIC_DX_DIR:-../agentic-dx-improvement}/skeletons/vaadin" && mvn -q dependency:go-offline ) || true
 
 REPEAT="${REPEAT:-1}"
 # Per-phase --max-concurrency (default 3 = all agent rows at once). Lower it (e.g.
 # MAX_CONCURRENCY=2) to ease load on the machine / browsers / shared ~/.m2.
 MAXC="${MAX_CONCURRENCY:-3}"
+
+# Per-ROW wall-clock ceiling. promptfoo's per-test timeout defaults to 0 (OFF), which
+# lets a wedged agentic subprocess block the whole run indefinitely (observed: a solve
+# agent finished but its SDK subprocess never exited, stalling the run 25 min until
+# killed by hand). Bound it so a hung row is recorded as a timeout error and the run
+# moves on. 45 min/row is generous — real solves run ~7-35 min. Set =0 to disable.
+export PROMPTFOO_EVAL_TIMEOUT_MS="${PROMPTFOO_EVAL_TIMEOUT_MS:-2700000}"
 
 # AGENT=<name>[,<name>...] → run only those agent rows. Translated to an anchored
 # --filter-providers and prepended to the args forwarded to BOTH phases. Anchored at
