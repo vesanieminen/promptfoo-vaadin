@@ -51,13 +51,20 @@ function die(msg) {
 }
 
 // --- sqlite3 CLI helpers (the binary is already a project dependency in practice) --
+// Reads need no busy_timeout: WAL readers get a snapshot and don't block on a writer.
 function sqliteJson(query) {
   const out = execFileSync('sqlite3', ['-json', DB, query], { encoding: 'utf8' });
   return out.trim() ? JSON.parse(out) : [];
 }
 function sqliteExec(script) {
-  // One transaction; image bytes are NOT in here, only small rows / JSON.
-  execFileSync('sqlite3', [DB], { input: `BEGIN;\n${script}\nCOMMIT;\n`, encoding: 'utf8' });
+  // One IMMEDIATE transaction so the write lock is taken up front; busy_timeout then
+  // lets a transient lock ride out — e.g. an open `promptfoo view` checkpointing the
+  // WAL — instead of failing immediately (the CLI default is 0). The PRAGMA's stdout
+  // is ignored (we don't parse exec output). Image bytes are NOT here, only small rows.
+  execFileSync('sqlite3', [DB], {
+    input: `PRAGMA busy_timeout=5000;\nBEGIN IMMEDIATE;\n${script}\nCOMMIT;\n`,
+    encoding: 'utf8',
+  });
 }
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`; // single-quote a SQL string literal
 
@@ -105,10 +112,14 @@ function attachAgent(evalId, agent) {
   } catch {
     /* none recorded → exclude nothing */
   }
+  // Order by capture time (mtime), so the gallery follows the sequence the agent
+  // actually took them in — not lexicographic filename order.
   const pngs = fs
     .readdirSync(ws)
     .filter((n) => n.toLowerCase().endsWith('.png') && !refs.includes(n))
-    .sort();
+    .map((n) => ({ n, t: fs.statSync(path.join(ws, n)).mtimeMs }))
+    .sort((a, b) => a.t - b.t)
+    .map((x) => x.n);
   if (!pngs.length) return { agent, status: 'no-shots' };
 
   const rows = sqliteJson(
@@ -153,7 +164,15 @@ function main() {
   console.error(`[attach_shots] PROBLEM=${PROBLEM} eval=${evalId}`);
   let total = 0;
   for (const agent of bench.SOLVERS) {
-    const r = attachAgent(evalId, agent);
+    // Per-agent isolation: a failure on one agent (e.g. a locked DB or an unexpected
+    // malformed response row) must not skip the remaining agents.
+    let r;
+    try {
+      r = attachAgent(evalId, agent);
+    } catch (e) {
+      console.error(`[attach_shots]   ${agent}: FAILED — ${e.message} (other agents continue)`);
+      continue;
+    }
     if (r.status === 'attached') {
       total += r.shots;
       console.error(`[attach_shots]   ${agent}: attached ${r.shots} screenshot(s) → ${r.names.join(', ')}`);
