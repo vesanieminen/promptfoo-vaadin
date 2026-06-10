@@ -255,6 +255,18 @@ AGENT=claude,claude-no-skills bash bench/run.sh   # narrow the agent rows (the s
 REPEAT=3 bash bench/run.sh
 ```
 
+Seed-only smoke test (no agents / auth / Maven / Playwright, ~2s) — re-seeds a
+problem's workspaces and prints its availability manifest
+(`workspaces/<problem>/available.json`: agent-skills SHA + skill list +
+plugin-declared MCP servers + reachability). Sanity-checks that the
+`agentic-dx-improvement` checkout is wired up and shows what skills/MCP **source** a
+run will use:
+
+```bash
+bash bench/seed.sh                       # default problem (basic_layout)
+PROBLEM=md_ui_spec bash bench/seed.sh    # a specific problem
+```
+
 Manual equivalent (run one problem's two phases yourself — set `PROBLEM` so the
 configs/seed/graders all target the same problem):
 

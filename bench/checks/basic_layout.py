@@ -14,9 +14,13 @@ def run_checks(ctx):
         # --- Structure (presence in code) ---
         ('@Route("basic_layout") present', ctx.jre(r'@Route\(\s*"basic_layout"'), True),
 
-        # --- Vaadin-specific (confirm structural intent in code) ---
-        ("uses HorizontalLayout", ctx.jhas("HorizontalLayout"), True),
-        ("uses VerticalLayout", ctx.jhas("VerticalLayout"), True),
+        # --- Vaadin-specific ("verify by reading the source") ---
+        # NOT critical: the rubric scores these (Vaadin-specific is 3/24 pts) but
+        # never gates on them — a working layout built from plain Divs is docked,
+        # not failed. Only @Route above hard-fails the row. (Matches the phase-2
+        # rubric and the source benchmark; severity aligned in main's PR #19.)
+        ("uses HorizontalLayout", ctx.jhas("HorizontalLayout"), False),
+        ("uses VerticalLayout", ctx.jhas("VerticalLayout"), False),
         ("content area uses Scroller", ctx.jhas("Scroller"), False),
     ]
     # No inline styles (Java + templates) and no leaked React/TSX views.
