@@ -134,6 +134,9 @@ fi
 ( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline ) || true
 
 REPEAT="${REPEAT:-1}"
+# Per-phase --max-concurrency (default 3 = all agent rows at once). Lower it (e.g.
+# MAX_CONCURRENCY=2) to ease load on the machine / browsers / shared ~/.m2.
+MAXC="${MAX_CONCURRENCY:-3}"
 
 # AGENT=<name>[,<name>...] → run only those agent rows. Translated to an anchored
 # --filter-providers and prepended to the args forwarded to BOTH phases. Anchored at
@@ -192,10 +195,10 @@ run_pipeline() {
   echo "[run] ===== problem: $prob =====" >&2
   echo "[run] PHASE 1/2 — solve  (promptfooconfig.js)" >&2
   PROBLEM="$prob" npx promptfoo@latest eval -c basic_layout/promptfooconfig.js \
-    --max-concurrency 3 --no-cache "$@" || true
+    --max-concurrency "$MAXC" --no-cache "$@" || true
   echo "[run] PHASE 2/2 — verify (verify.js)" >&2
   PROBLEM="$prob" npx promptfoo@latest eval -c basic_layout/verify.js \
-    --max-concurrency 3 --no-cache "$@" || true
+    --max-concurrency "$MAXC" --no-cache "$@" || true
 }
 
 # Run the selected problems in sequence (each is its own solve+verify pipeline).

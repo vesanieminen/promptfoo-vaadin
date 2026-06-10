@@ -65,14 +65,73 @@ grader finds its row's workspace from `context['provider']` + `PROBLEM` (`codex`
 `basic_form` → `workspaces/basic_form/codex`, `verify-claude-no-skills` →
 `workspaces/<problem>/claude-no-skills`, …).
 
-### Adding a problem
+### Adding a new problem
 
-It's a drop-in: (1) add `problems/<name>/` (`task.md` + `rubric.md` [+ reference
-PNGs]) to the `agentic-dx-improvement` checkout, (2) append `<name>` to `PROBLEMS`
-in `bench.js`, and (3) add `checks/<name>.py` (a `run_checks(ctx)` returning the
-source-checkable bullets; reuse `ctx.common_hygiene()` for the no-inline-styles /
-no-TSX bullets). Ports and workspaces follow automatically; phase-2 grading needs no
-change. (No `checks/<name>.py` → phase-1 degrades to shared hygiene checks only.)
+A new problem is a **drop-in** — no edits to the configs, the seed hooks, or
+`grade_verdict.py`. Three required steps (a fourth to run it):
+
+1. **Add the source** to the `agentic-dx-improvement` checkout: a
+   `problems/<name>/` dir with `task.md` and `rubric.md` (plus any reference PNGs the
+   rubric refers to — `md_ui_spec` ships none, that's fine). The rubric's point total
+   can be anything; phase 2 normalizes it.
+
+2. **Register it in `bench.js`** — append `'<name>'` to the `PROBLEMS` array. That is
+   all the configs, ports, and workspace paths need. Order matters only for ports:
+   each problem reserves 3 consecutive ports from `8081`, and *appending* keeps the
+   existing problems' ports stable.
+
+3. **Add `checks/<name>.py`** — the phase-1 static source checks. Export
+   `run_checks(ctx)` returning a list of `(name, ok, critical)` tuples (see the API
+   and example below). *Optional:* skip it and phase 1 degrades to just the shared
+   hygiene checks (with a note) — phase-2 rubric grading still works fully.
+
+4. **Run it:** `PROBLEM=<name> bash basic_layout/run.sh` (or add `<name>` to a
+   comma-list, or just run with no `PROBLEM` to include it in the all-problems sweep).
+
+**The `CheckCtx` your `run_checks(ctx)` receives** (built by `grade_static.py` from
+the solved `app/`):
+
+| `ctx` member | Returns |
+|---|---|
+| `ctx.java_src` | all `src/main/java/**/*.java` concatenated (str) |
+| `ctx.jhas(substr)` | `True` if the substring appears in the Java source |
+| `ctx.jre(pattern)` | `True` if the regex (`re.search`) matches the Java source |
+| `ctx.glob_app(pattern)` | solver-authored files matching `pattern` under `app/` (recursive; framework-generated `generated/` and `node_modules/` already filtered out) |
+| `ctx.read(path)` | a file's text (or `""`) |
+| `ctx.common_hygiene()` | the shared `[(name, ok, critical), …]` Vaadin-hygiene bullets — no inline styles in Java, no inline `style=` in templates, no React/TSX view files — to append to your list |
+
+Each tuple is `(name: str, ok: bool, critical: bool)`. **`critical=True` gates the
+row's pass/fail** — keep that to the bare "did the agent produce the required
+artifact?" check (e.g. the `@Route`); everything else only contributes to the static
+score and shows as PASS/FAIL in the breakdown. (This mirrors the source benchmark and
+the phase-2 rubric, where missing a Vaadin idiom is a *deduction*, not a hard fail.)
+
+**Minimal `checks/<name>.py`:**
+
+```python
+"""Static source checks for the <name> problem (PHASE 1 gate)."""
+def run_checks(ctx):
+    checks = [
+        ('@Route("<name>") present', ctx.jre(r'@Route\(\s*"<name>"'), True),  # the only gate
+        ("uses SomeVaadinComponent",  ctx.jhas("SomeVaadinComponent"),  False),
+        ("binds via method references", ctx.jre(r'bind\([^)]*::'),       False),
+    ]
+    checks += ctx.common_hygiene()   # shared no-inline-styles / no-TSX bullets
+    return checks
+```
+
+**What's automatic (no edits):** per-`(problem, agent)` ports + namespaced
+`workspaces/<name>/<agent>` (`bench.js`); the solve/verify configs, the shared Vaadin
+prompt, seeding + rubric strip/restore + the `.reference-images.json` manifest
+(`seed.js` / `seed_verify.js`); and **all of phase 2** — the verifier reads your
+`rubric.md` and `grade_verdict.py` sums + normalizes whatever sections it returns, so
+a 21/24, 23/31, or 41/48 rubric all grade with zero code change.
+
+**Notes:** reference PNGs are auto-excluded from the screenshot galleries (recorded
+per workspace in `.reference-images.json`, no hardcoded filenames). All current
+problems use the Vaadin skeleton (`TECHSTACK=vaadin`); a different stack would need a
+`skeletons/<stack>/` + `base_prompt_<stack>.md` in the checkout (and the shared prompt
+revisited).
 
 ### What was intentionally skipped (doesn't fit / is redundant in promptfoo)
 

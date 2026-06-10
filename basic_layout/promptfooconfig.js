@@ -27,9 +27,21 @@
 // process only (never your rc files) — your choice of ANTHROPIC_API_KEY (API-key
 // billing) or CLAUDE_CODE_OAUTH_TOKEN (subscription). See run.sh / README.md.
 
+const path = require('path');
 const bench = require('./bench.js');
 
 const PROBLEM = bench.currentProblem(); // env PROBLEM (default basic_layout); throws on a typo
+
+// The agentic-dx-improvement checkout (source of the agent-skills plugin), resolved
+// the SAME way seed.js does: AGENTIC_DX_DIR if set, else the sibling of the repo
+// root. We build an ABSOLUTE plugin path from it so the `claude` row's skills load
+// regardless of where this config sits (e.g. a git worktree, where a relative
+// `../../` would miss) — and so relocating the checkout only needs AGENTIC_DX_DIR,
+// not a config edit.
+const AGENTIC_DX_DIR = process.env.AGENTIC_DX_DIR
+  ? path.resolve(process.env.AGENTIC_DX_DIR)
+  : path.resolve(__dirname, '..', '..', 'agentic-dx-improvement');
+const AGENT_SKILLS_PLUGIN = path.join(AGENTIC_DX_DIR, 'agent-skills');
 
 // Playwright (chromium) as an in-memory (`--isolated`) browser, so the concurrent
 // solver rows don't deadlock on a shared profile lock. Registered per provider.
@@ -113,10 +125,10 @@ module.exports = {
         allow_dangerously_skip_permissions: true,
         allow_all_tools: true,
         setting_sources: [], // ignore the user's personal settings/plugins → clean benchmark
-        // The Vaadin agent-skills plugin (layouts, responsive-layouts, …). Path is
-        // resolved relative to THIS config's dir, so it's unaffected by the deeper
-        // (namespaced) working_dir.
-        plugins: [{ type: 'local', path: '../../agentic-dx-improvement/agent-skills' }],
+        // The Vaadin agent-skills plugin (layouts, responsive-layouts, …), as an
+        // ABSOLUTE path derived from AGENTIC_DX_DIR (see above) so it resolves from
+        // any config location (worktree included).
+        plugins: [{ type: 'local', path: AGENT_SKILLS_PLUGIN }],
         mcp: {
           servers: [
             { name: 'playwright', command: 'npx', args: playwrightArgs },
