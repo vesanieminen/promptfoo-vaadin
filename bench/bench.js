@@ -17,9 +17,30 @@ const path = require('path');
 // order is load-bearing: appending keeps existing problems' ports stable.
 const PROBLEMS = ['basic_layout', 'basic_form', 'md_ui_spec'];
 
-// Solver providers (= workspace names), in port order within a problem. `claude`
-// and `claude-no-skills` are the skills A/B; codex is the cross-agent comparison.
-const SOLVERS = ['codex', 'claude', 'claude-no-skills'];
+// Solver setups — the single source of truth for the solver matrix. Each entry is one
+// benchmark "setup": a `label` (which is BOTH the workspace name and the port key), the
+// `agent` that runs it, and the docs-help it gets. ORDER IS LOAD-BEARING — a setup's
+// port offset derives from its index here (via SOLVERS below), so appending a setup
+// keeps existing setups' ports stable. Adding a setup is a ONE-LINE edit HERE:
+// promptfooconfig.js builds a provider for each entry (dispatching on `agent`), SOLVERS
+// derives from it, and verify.js maps SOLVERS to verifiers — none of which need
+// touching. The skills A/B is `claude` vs `claude-no-skills`; the local-MCP A/B is
+// `claude` vs `claude-local-mcp`; `codex` is the cross-agent comparison.
+//   - agent      'claude' | 'codex' — which provider factory builds the row
+//   - skills     load the agent-skills plugin (claude) / seed skills into .agents/skills (codex)
+//   - vaadinMcp  which Vaadin docs MCP to wire: 'remote' (hosted), 'local' (under test), or null (none)
+const SETUPS = [
+  { label: 'codex',            agent: 'codex',  skills: true,  vaadinMcp: 'remote' },
+  { label: 'claude',           agent: 'claude', skills: true,  vaadinMcp: 'remote' },
+  { label: 'claude-no-skills', agent: 'claude', skills: false, vaadinMcp: null     },
+  { label: 'claude-local-mcp', agent: 'claude', skills: true,  vaadinMcp: 'local'  },
+];
+
+// Solver labels (= workspace names), in port order within a problem. Derived from
+// SETUPS so the matrix and the label list can never drift. The Python graders
+// (grade_static.py / grade_verdict.py, `_WORKSPACES`) and run.sh (`_known`) keep their
+// own copies of these labels — keep those in sync with the SETUPS labels above.
+const SOLVERS = SETUPS.map((s) => s.label);
 
 // First port (basic_layout/codex). Each problem reserves SOLVERS.length consecutive
 // ports, so the three problems occupy 8081..8089 and never collide — even if two
@@ -56,6 +77,7 @@ function currentProblem() {
 
 module.exports = {
   PROBLEMS,
+  SETUPS,
   SOLVERS,
   PORT_BASE,
   problemIndex,
