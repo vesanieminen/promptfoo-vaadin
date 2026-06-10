@@ -66,7 +66,7 @@ def _reference_images(workspace):
 # claude-no-skills); verifier labels are `verify-<name>`. Exact match — not a
 # substring scan — so 'claude' can never be mistaken for 'claude-no-skills' (the id
 # `anthropic:claude-agent-sdk` also contains "claude"), regardless of ordering.
-_WORKSPACES = frozenset(("codex", "claude", "claude-no-skills"))
+_WORKSPACES = frozenset(("codex", "claude", "claude-no-skills", "claude-local-mcp"))
 
 
 def _agent_from_provider(context):

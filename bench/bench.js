@@ -18,8 +18,11 @@ const path = require('path');
 const PROBLEMS = ['basic_layout', 'basic_form', 'md_ui_spec'];
 
 // Solver providers (= workspace names), in port order within a problem. `claude`
-// and `claude-no-skills` are the skills A/B; codex is the cross-agent comparison.
-const SOLVERS = ['codex', 'claude', 'claude-no-skills'];
+// and `claude-no-skills` are the skills A/B; `claude-local-mcp` is `claude` with the
+// Vaadin docs MCP pointed at a LOCAL server instead of the hosted one (the local-MCP
+// A/B); codex is the cross-agent comparison. Appending a solver only grows each
+// problem's port block (3→4 wide); existing within-problem indices stay put.
+const SOLVERS = ['codex', 'claude', 'claude-no-skills', 'claude-local-mcp'];
 
 // First port (basic_layout/codex). Each problem reserves SOLVERS.length consecutive
 // ports, so the three problems occupy 8081..8089 and never collide — even if two

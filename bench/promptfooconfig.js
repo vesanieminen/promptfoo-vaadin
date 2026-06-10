@@ -46,8 +46,11 @@ const AGENT_SKILLS_PLUGIN = path.join(AGENTIC_DX_DIR, 'agent-skills');
 // Playwright (chromium) as an in-memory (`--isolated`) browser, so the concurrent
 // solver rows don't deadlock on a shared profile lock. Registered per provider.
 const playwrightArgs = ['--yes', '@playwright/mcp@latest', '--browser', 'chromium', '--headless', '--isolated'];
-// The Vaadin docs MCP the agent-skills plugin bundles (used by codex + claude rows).
-const VAADIN_MCP_URL = 'https://mcp.vaadin.com/docs';
+// The Vaadin docs MCP the agent-skills plugin bundles. REMOTE is the hosted server
+// (used by codex + the `claude` row); LOCAL is the server under test in the
+// `claude-local-mcp` A/B (a local HTTP MCP on :18080, /docs endpoint).
+const VAADIN_MCP_REMOTE = 'https://mcp.vaadin.com/docs';
+const VAADIN_MCP_LOCAL = 'http://localhost:18080/docs';
 
 // workspaces/<problem>/<agent>, resolved by promptfoo relative to THIS config's dir
 // — the exact path seed.js seeds (both via bench.workspaceRel).
@@ -76,6 +79,36 @@ const PROMPT = [
   "The app's HTTP port is set in `app/src/main/resources/application.properties`",
   '(`server.port`); use that port (not necessarily 8080) when previewing in a browser.',
 ].join('\n');
+
+// A Claude agentic solver row (id `anthropic:claude-code`). The three Claude
+// conditions differ ONLY in the docs help they get; everything else (pinned model,
+// bypass perms, clean setting_sources, Playwright) is identical, so the rubric/trace
+// delta isolates the docs-help variable:
+//   - skills:true        → load the agent-skills plugin (layouts, responsive-layouts, …)
+//   - vaadinMcpUrl:<url>  → wire that Vaadin docs MCP (null = none, the no-skills baseline)
+// `label` is also the workspace name (wd(label) → workspaces/<problem>/<label>), so it
+// MUST be one of bench.SOLVERS or seed.js won't have seeded a workspace for it.
+function claudeSolver({ label, vaadinMcpUrl, skills }) {
+  const servers = [{ name: 'playwright', command: 'npx', args: playwrightArgs }];
+  // The Vaadin docs MCP must be wired EXPLICITLY: the claude-agent-sdk provider loads
+  // the plugin's SKILLS (via plugins:) but NOT its bundled .mcp.json, so without this
+  // entry the agent makes zero mcp__vaadin calls even with the plugin (probe-verified).
+  if (vaadinMcpUrl) servers.push({ name: 'vaadin', url: vaadinMcpUrl });
+  const config = {
+    apiKeyRequired: false, // fall back to subscription (CLAUDE_CODE_OAUTH_TOKEN / login) when ANTHROPIC_API_KEY is unset
+    model: 'claude-opus-4-8', // PINNED for reproducibility — only the docs-help differs across rows
+    working_dir: wd(label),
+    permission_mode: 'bypassPermissions',
+    allow_dangerously_skip_permissions: true,
+    allow_all_tools: true,
+    setting_sources: [], // ignore the user's personal settings/plugins → clean benchmark
+    mcp: { servers },
+  };
+  // The Vaadin agent-skills plugin, as an ABSOLUTE path derived from AGENTIC_DX_DIR so
+  // it resolves from any config location (worktree included).
+  if (skills) config.plugins = [{ type: 'local', path: AGENT_SKILLS_PLUGIN }];
+  return { id: 'anthropic:claude-code', label, config }; // = anthropic:claude-agent-sdk
+}
 
 module.exports = {
   // yaml-language-server style schema hint isn't needed for JS; promptfoo validates regardless.
@@ -109,57 +142,20 @@ module.exports = {
           // Codex has no first-class mcp/plugin key; config goes via cli_config.
           mcp_servers: {
             playwright: { command: 'npx', args: playwrightArgs },
-            vaadin: { url: VAADIN_MCP_URL }, // parity with Claude
+            vaadin: { url: VAADIN_MCP_REMOTE }, // parity with the `claude` (remote-MCP) row
           },
         },
       },
     },
-    {
-      id: 'anthropic:claude-code', // = anthropic:claude-agent-sdk (the agentic Claude Code provider)
-      label: 'claude',
-      config: {
-        apiKeyRequired: false, // fall back to subscription (CLAUDE_CODE_OAUTH_TOKEN / login) when ANTHROPIC_API_KEY is unset
-        model: 'claude-opus-4-8', // PINNED for reproducibility
-        working_dir: wd('claude'),
-        permission_mode: 'bypassPermissions',
-        allow_dangerously_skip_permissions: true,
-        allow_all_tools: true,
-        setting_sources: [], // ignore the user's personal settings/plugins → clean benchmark
-        // The Vaadin agent-skills plugin (layouts, responsive-layouts, …), as an
-        // ABSOLUTE path derived from AGENTIC_DX_DIR (see above) so it resolves from
-        // any config location (worktree included).
-        plugins: [{ type: 'local', path: AGENT_SKILLS_PLUGIN }],
-        mcp: {
-          servers: [
-            { name: 'playwright', command: 'npx', args: playwrightArgs },
-            // Vaadin docs MCP, declared EXPLICITLY: the claude-agent-sdk provider loads
-            // the plugin's SKILLS (via plugins:) but NOT its bundled .mcp.json, so the
-            // server must be wired here (mirrors the codex row's cli_config). Verified by
-            // a with-skills probe — without this, zero mcp__vaadin calls.
-            { name: 'vaadin', url: VAADIN_MCP_URL },
-          ],
-        },
-      },
-    },
-    {
-      id: 'anthropic:claude-code', // BASELINE — same solver as `claude`, MINUS the Vaadin skills AND the docs MCP
-      label: 'claude-no-skills',
-      config: {
-        apiKeyRequired: false,
-        model: 'claude-opus-4-8', // same pin as `claude` so the ONLY difference is the skills
-        working_dir: wd('claude-no-skills'),
-        permission_mode: 'bypassPermissions',
-        allow_dangerously_skip_permissions: true,
-        allow_all_tools: true,
-        setting_sources: [],
-        // NO plugins (no Vaadin agent-skills) and NO Vaadin docs MCP — this row isolates
-        // how much the skills move the rubric (the benchmark's thesis). Playwright stays
-        // so it can self-verify in a browser like the others.
-        mcp: {
-          servers: [{ name: 'playwright', command: 'npx', args: playwrightArgs }],
-        },
-      },
-    },
+    // Claude WITH the Vaadin agent-skills plugin. Two rows that differ ONLY in WHICH
+    // Vaadin docs MCP they call — the hosted REMOTE server vs a LOCAL one — so the
+    // rubric/trace delta between them isolates the local MCP server's effect.
+    claudeSolver({ label: 'claude', vaadinMcpUrl: VAADIN_MCP_REMOTE, skills: true }),
+    claudeSolver({ label: 'claude-local-mcp', vaadinMcpUrl: VAADIN_MCP_LOCAL, skills: true }),
+    // BASELINE — same solver, MINUS the skills AND any Vaadin docs MCP. Isolates how
+    // much the skills+docs move the rubric (the benchmark's thesis). Playwright stays
+    // so it can self-verify in a browser like the others.
+    claudeSolver({ label: 'claude-no-skills', vaadinMcpUrl: null, skills: false }),
   ],
 
   // A single agentic task (no per-case vars). grade_static.py is the cheap,
