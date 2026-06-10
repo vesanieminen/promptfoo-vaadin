@@ -140,7 +140,7 @@ revisited).
   launch and reap the agents. The *model* is still pinned for reproducibility.
 - **The subprocess verifier** — `grade_rubric.py`, its retry/timeout/port-freeing
   loop, `VERIFIER_CMD`, and the per-workspace `.claude-home` are gone; the verifier
-  is a provider (`verify.yaml`) and promptfoo owns its lifecycle.
+  is a provider (`verify.js`) and promptfoo owns its lifecycle.
 - **Docker isolation** — solver and grader run on the host (the harness's local
   runner already does this).
 - **`format_stream.py` cost/token summary** — promptfoo tracks cost itself, and now
@@ -196,8 +196,9 @@ The phase-1 columns read straight from the solver row's provider-response metada
 - The `agentic-dx-improvement` checkout available (default: sibling of this repo;
   override with `AGENTIC_DX_DIR`). Its `agent-skills` submodule should be populated
   (`git submodule update --init --recursive`) — the `claude` provider loads it as a
-  local plugin from `../../agentic-dx-improvement/agent-skills` (the `vaadin-skills`
-  plugin: skills + the bundled Vaadin docs MCP). For **parity, the `codex` row gets
+  local plugin from `$AGENTIC_DX_DIR/agent-skills` (the `vaadin-skills` plugin:
+  skills + the bundled Vaadin docs MCP) — an **absolute** path derived from
+  `AGENTIC_DX_DIR`, so it resolves even from a git worktree. For **parity, the `codex` row gets
   the same skills**: `seed.js` symlinks `workspaces/codex/.agents/skills/` →
   `agent-skills/skills/`, and the Vaadin docs MCP is added to Codex's `cli_config`.
   The **`claude-no-skills`** row deliberately gets neither (it's the baseline).
@@ -235,8 +236,9 @@ The phase-1 columns read straight from the solver row's provider-response metada
 
 ## Run it
 
-From the **repo root** (the providers' `working_dir` and the `file://` grader paths
-resolve relative to each config's directory):
+From the **repo root** — or a git worktree (set `AGENTIC_DX_DIR` to an absolute path).
+The providers' `working_dir` and the `file://` grader paths resolve relative to each
+config's directory:
 
 ```bash
 # RECOMMENDED — the wrapper warms the Maven cache, then for each PROBLEM runs PHASE 1
@@ -273,7 +275,7 @@ configs/seed/graders all target the same problem):
 ```bash
 # Optional: pick an auth override (otherwise your Claude Code / Codex login is used):
 #   export ANTHROPIC_API_KEY='sk-ant-api03-...'   # OR  CLAUDE_CODE_OAUTH_TOKEN='sk-ant-oat01-...'
-( cd ../agentic-dx-improvement/skeletons/vaadin && mvn -q dependency:go-offline )  # warm ~/.m2 once
+( cd "${AGENTIC_DX_DIR:-../agentic-dx-improvement}/skeletons/vaadin" && mvn -q dependency:go-offline )  # warm ~/.m2 once
 # --no-cache is REQUIRED: the agentic providers cache by prompt, so without it a
 # re-run replays the first run instead of actually solving/verifying.
 PROBLEM=basic_form npx promptfoo@latest eval -c bench/promptfooconfig.js --max-concurrency 3 --no-cache  # PHASE 1
@@ -303,12 +305,14 @@ isolated by `seed.js` up front, statically per provider:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `AGENTIC_DX_DIR` | `../agentic-dx-improvement` | Source of the problems, skeleton, base prompt, rubrics (used by `seed.js` / `seed_verify.js`). **Note:** the `claude` provider's plugin path in `promptfooconfig.js` is the literal sibling default — adjust it there too if you relocate the checkout. |
+| `AGENTIC_DX_DIR` | _(sibling of the repo)_ | Source of the problems, skeleton, base prompt, rubrics, **and** the `claude` row's agent-skills plugin — all derived from it (`seed.js` / `seed_verify.js` / `promptfooconfig.js`). Set it to an **absolute path** to run from anywhere (e.g. a git worktree); relocating the checkout needs **only** this var — no config edit. |
 | `PROBLEM` | _(all)_ | **`run.sh`:** which problem(s) to run — one or a comma-list (`basic_layout`, `basic_form`, `md_ui_spec`); default all. **A bare `eval -c …`:** the single problem this eval targets (default `basic_layout`). |
 | `TECHSTACK` | `vaadin` | Skeleton + base-prompt stack |
 | `RUBRIC_PASS_THRESHOLD` | `0.6` | Floor (fraction of max) for `grade_verdict.py` to pass |
 | `AGENT` | _(all)_ | `run.sh` only: which agent row(s) to run — `codex`, `claude`, `claude-no-skills` (comma-list ok) |
 | `REPEAT` | `1` | `run.sh` only: re-run the whole solve+verify pipeline N times |
+| `MAX_CONCURRENCY` | `3` | `run.sh` only: per-phase `--max-concurrency` (3 = all agent rows at once). Lower it (e.g. `2`) to ease load on the machine / browsers / shared `~/.m2`. |
+| `PROMPTFOO_EVAL_TIMEOUT_MS` | `2700000` (45 min/row) | `run.sh` only: per-row wall-clock ceiling — a wedged agentic subprocess is recorded as a timeout and the run moves on (promptfoo's own default is `0` = OFF, which can hang a run indefinitely). Set `=0` to disable. |
 | `ANTHROPIC_API_KEY` | _(optional override)_ | **API-key auth mode.** Bills against the API key (solver + verifier); precedence over any login. Inject run-scoped via `run.sh`. |
 | `CLAUDE_CODE_OAUTH_TOKEN` | _(optional override)_ | **Subscription auth mode.** For a machine/CI with no Keychain login. Inject run-scoped via `run.sh`. |
 
