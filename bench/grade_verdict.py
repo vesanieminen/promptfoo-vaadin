@@ -66,6 +66,8 @@ def _reference_images(workspace):
 # claude-no-skills); verifier labels are `verify-<name>`. Exact match — not a
 # substring scan — so 'claude' can never be mistaken for 'claude-no-skills' (the id
 # `anthropic:claude-agent-sdk` also contains "claude"), regardless of ordering.
+# Canonical list: the SETUPS labels in bench.js (this Python can't import it — keep the
+# two in sync when adding a solver).
 _WORKSPACES = frozenset(("codex", "claude", "claude-no-skills", "claude-local-mcp"))
 
 

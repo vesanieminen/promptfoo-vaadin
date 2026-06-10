@@ -154,7 +154,7 @@ export PROMPTFOO_EVAL_TIMEOUT_MS="${PROMPTFOO_EVAL_TIMEOUT_MS:-2700000}"
 # `set --` injection keeps this bash-3.2 safe (no empty-array expansion under set -u).
 if [ -n "${AGENT:-}" ]; then
   AGENT="${AGENT// /}"              # tolerate spaces, e.g. AGENT="claude, codex"
-  _known="codex claude claude-no-skills claude-local-mcp"
+  _known="codex claude claude-no-skills claude-local-mcp"   # = bench.SETUPS labels (keep in sync)
   IFS=',' read -ra _want <<< "$AGENT"
   for _a in "${_want[@]}"; do
     case " $_known " in
