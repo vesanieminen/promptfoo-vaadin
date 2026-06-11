@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>basic_layout benchmark — how it works</title>
+<style>
+  :root{
+    --ink:#16202e; --muted:#5b6b7e; --line:#e3e8ef; --bg:#f6f8fb; --card:#fff;
+    --indigo:#4f46e5; --blue:#2563eb; --violet:#7c3aed;
+    --codex:#d97706; --claude:#0d9488; --noskills:#64748b;
+    --green:#16a34a; --red:#dc2626; --amber:#b45309;
+    --shadow:0 1px 2px rgba(16,32,46,.06),0 8px 24px rgba(16,32,46,.06);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  a{color:var(--indigo);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ---- top nav ---- */
+  nav.bar{
+    position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);
+    backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--line);
+  }
+  nav.bar .inner{max-width:1080px;margin:0 auto;padding:10px 22px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  nav.bar .brand{font-weight:700;margin-right:14px;letter-spacing:-.01em}
+  nav.bar a{color:var(--muted);font-size:13.5px;padding:5px 10px;border-radius:7px}
+  nav.bar a:hover{background:#eef1f6;color:var(--ink);text-decoration:none}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+  header.hero{padding:64px 22px 30px;max-width:1080px;margin:0 auto}
+  header.hero .kicker{font:600 13px/1 ui-monospace,monospace;color:var(--indigo);letter-spacing:.08em;text-transform:uppercase}
+  header.hero h1{font-size:clamp(30px,4.4vw,46px);line-height:1.08;letter-spacing:-.02em;margin:14px 0 8px}
+  header.hero p.lede{font-size:19px;color:var(--muted);max-width:760px;margin:0}
+
+  section{padding:34px 0;border-top:1px solid var(--line)}
+  section:first-of-type{border-top:0}
+  h2{font-size:26px;letter-spacing:-.015em;margin:0 0 6px;display:flex;align-items:center;gap:10px}
+  h2 .num{font:700 14px/26px ui-monospace,monospace;color:#fff;background:var(--indigo);
+    width:26px;height:26px;border-radius:7px;text-align:center;flex:none}
+  h2 + .sub{color:var(--muted);margin:0 0 20px;font-size:16px}
+  h3{font-size:17px;margin:22px 0 8px;letter-spacing:-.01em}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  .pad{padding:20px 22px}
+
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.grid3,.grid2{grid-template-columns:1fr}}
+
+  .chip{display:inline-flex;align-items:center;gap:7px;font:600 12.5px/1 ui-monospace,monospace;
+    padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;white-space:nowrap}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .c-codex{color:var(--codex)} .d-codex{background:var(--codex)}
+  .c-claude{color:var(--claude)} .d-claude{background:var(--claude)}
+  .c-noskills{color:var(--noskills)} .d-noskills{background:var(--noskills)}
+  .c-blue{color:var(--blue)} .c-violet{color:var(--violet)}
+
+  /* ---- big pipeline ---- */
+  .pipe{display:flex;flex-direction:column;align-items:stretch;gap:0}
+  .stage{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px}
+  .stage .stitle{font-weight:700;font-size:14px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+  .arrow{align-self:center;color:var(--muted);font-size:13px;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px}
+  .arrow .lbl{font:600 12px/1.3 ui-monospace,monospace;color:var(--indigo);background:#eef0fe;
+    padding:4px 9px;border-radius:999px;border:1px solid #dcdffb;text-align:center;max-width:560px}
+  .arrow .v{font-size:20px;line-height:1}
+  .phaseblk{border-radius:16px;padding:14px;border:2px solid}
+  .phase1{border-color:#bfd4fe;background:linear-gradient(180deg,#f2f7ff,#fbfdff)}
+  .phase2{border-color:#ddd0fb;background:linear-gradient(180deg,#f7f3ff,#fdfcff)}
+  .phasehd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 4px 12px;flex-wrap:wrap}
+  .phasehd .t{font-weight:800;letter-spacing:-.01em;font-size:16px}
+  .phasehd .t .ph1{color:var(--blue)} .phasehd .t .ph2{color:var(--violet)}
+  .phasehd .file{font:600 12.5px/1 ui-monospace,monospace;color:var(--muted)}
+  .lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:820px){.lanes{grid-template-columns:1fr}}
+  .lane{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:7px}
+  .lane .top{border-top:3px solid;border-radius:3px;margin:-12px -12px 4px;padding:9px 12px 7px;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap}
+  .lane .port{font:600 11px/1 ui-monospace,monospace;color:var(--muted);background:#f1f4f9;border-radius:5px;padding:3px 6px}
+  .lane.codex .top{border-color:var(--codex)} .lane.claude .top{border-color:var(--claude)} .lane.noskills .top{border-color:var(--noskills)}
+  .lane small{color:var(--muted);font-size:12.5px;line-height:1.45}
+  .innerbox{background:#fff;border:1px dashed #cfd8e3;border-radius:9px;padding:10px 12px;margin-top:6px}
+  .innerbox .ib-t{font:600 12px/1 ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+
+  ul.tight{margin:8px 0 0;padding-left:20px}
+  ul.tight li{margin:4px 0}
+  .lead{font-size:15px;color:var(--muted)}
+
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14.5px}
+  .kv dt{font:600 13px/1.5 ui-monospace,monospace;color:var(--violet)}
+  .kv dd{margin:0;color:var(--ink)}
+
+  table{width:100%;border-collapse:collapse;font-size:14.5px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f3f6fa;font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+  tr:last-child td{border-bottom:0}
+  td.good{color:var(--green);font-weight:600}
+  td.bad{color:var(--red);font-weight:600}
+
+  /* results-table mock */
+  .runwrap{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:820px){.runwrap{grid-template-columns:1fr}}
+  .runtbl{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+  .runtbl .cap{padding:10px 14px;font:700 13px/1.2 ui-monospace,monospace;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .runtbl.r1 .cap{background:var(--blue)} .runtbl.r2 .cap{background:var(--violet)}
+  .runtbl .cap .tag{font-weight:600;font-size:11px;opacity:.92;background:rgba(255,255,255,.2);padding:3px 8px;border-radius:999px}
+  .runtbl table{border:0;border-radius:0}
+  .runtbl th{font-size:11px}
+  .cell-prov{font:600 12.5px/1 ui-monospace,monospace}
+  .mini{font-size:11.5px;color:var(--muted)}
+  .passpill{display:inline-block;font:700 11px/1 ui-monospace,monospace;padding:4px 7px;border-radius:6px}
+  .pp-pass{background:#e7f6ec;color:var(--green)} .pp-diag{background:#eef0fe;color:var(--indigo)}
+
+  .callout{border:1px solid var(--line);border-left:4px solid var(--indigo);background:#fbfcfe;border-radius:10px;padding:14px 18px;margin:14px 0}
+  .callout.warn{border-left-color:var(--amber);background:#fffaf2}
+  .callout.good{border-left-color:var(--green);background:#f5fbf7}
+  .callout .ct{font-weight:700;margin-bottom:3px}
+
+  pre{background:#0f1623;color:#e6edf6;border-radius:12px;padding:16px 18px;overflow:auto;font-size:13px;line-height:1.6;margin:10px 0;box-shadow:var(--shadow)}
+  pre .c{color:#7d8aa3}
+  pre .g{color:#7ee2b8}
+  pre .y{color:#f0c674}
+  code.in{background:#eef1f6;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:13.5px}
+
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0}
+
+  footer{padding:40px 22px 64px;color:var(--muted);font-size:13.5px;max-width:1080px;margin:0 auto}
+  .pillrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .filemap{font-size:14px}
+  .filemap .row{display:grid;grid-template-columns:230px 1fr;gap:14px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .filemap .row:last-child{border-bottom:0}
+  .filemap .fn{font:600 13px/1.5 ui-monospace,monospace;color:var(--ink)}
+  @media(max-width:640px){.filemap .row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="bar">
+  <div class="inner">
+    <span class="brand">basic_layout&nbsp;·&nbsp;how&nbsp;it&nbsp;works</span>
+    <a href="#bigidea">Big idea</a>
+    <a href="#pipeline">Pipeline</a>
+    <a href="#agents">Agents</a>
+    <a href="#phase1">Phase 1</a>
+    <a href="#phase2">Phase 2</a>
+    <a href="#rows">Runs &amp; rows</a>
+    <a href="#why">Why a provider</a>
+    <a href="#auth">Auth</a>
+    <a href="#run">Run it</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="kicker">Agentic-DX benchmark · promptfoo port</div>
+  <h1>How the <span class="mono">basic_layout</span> benchmark works</h1>
+  <p class="lede">Three coding agents each solve the same Vaadin layout task; a fourth agent grades each
+  result against a rubric. It runs as <strong>two promptfoo evals</strong> chained by one wrapper script —
+  a <em>solve</em> phase and a <em>verify</em> phase.</p>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ BIG IDEA ============ -->
+  <section id="bigidea">
+    <h2><span class="num">★</span>The one idea that shapes everything</h2>
+    <p class="sub">promptfoo has a strict division of labour. Internalise this and the whole layout falls out of it.</p>
+    <div class="grid2">
+      <div class="card pad">
+        <h3 style="margin-top:0">Providers <span style="color:var(--muted);font-weight:400">do the work</span></h3>
+        <p class="lead">A <strong>provider</strong> is something promptfoo runs and measures — an LLM, or here a
+        full coding agent that writes files, runs Maven, and drives a browser. promptfoo natively tracks its
+        <strong>cost, tokens, latency, retries</strong>.</p>
+        <div class="legend">
+          <span class="chip"><span class="dot d-codex"></span>solver</span>
+          <span class="chip"><span class="dot d-claude"></span>solver</span>
+          <span class="chip"><span class="dot" style="background:var(--violet)"></span>verifier</span>
+        </div>
+      </div>
+      <div class="card pad">
+        <h3 style="margin-top:0">Assertions <span style="color:var(--muted);font-weight:400">just check the output</span></h3>
+        <p class="lead">An <strong>assertion</strong> is a cheap, deterministic check on what a provider returned.
+        Here they're two small Python files that read a score and turn it into pass/fail + diagnostic columns.
+        They do <strong>not</strong> spawn agents.</p>
+        <div class="legend">
+          <span class="chip mono">grade_static.py</span>
+          <span class="chip mono">grade_verdict.py</span>
+        </div>
+      </div>
+    </div>
+    <div class="callout good">
+      <div class="ct">Because the verifier is itself an agent, it is a <u>provider</u>, not an assertion.</div>
+      That single decision is why solving and verifying are separate rows — and why the verifier's cost is now
+      visible. The whole design below is this rule, applied twice. <span class="mono">(see docs/ADR-verifier-as-provider.md)</span>
+    </div>
+  </section>
+
+  <!-- ============ PIPELINE ============ -->
+  <section id="pipeline">
+    <h2><span class="num">1</span>The pipeline at a glance</h2>
+    <p class="sub">One command — <code class="in">bash basic_layout/run.sh</code> — runs everything below, top to bottom.</p>
+
+    <div class="pipe">
+
+      <div class="stage">
+        <p class="stitle">Sources (read-only)</p>
+        <strong>../agentic-dx-improvement/</strong> &nbsp;<span class="mono" style="color:var(--muted);font-size:13px">(sibling checkout; override with AGENTIC_DX_DIR)</span>
+        <ul class="tight">
+          <li><span class="mono">problems/basic_layout/</span> — <code class="in">task.md</code>, reference PNGs, <code class="in">rubric.md</code></li>
+          <li><span class="mono">skeletons/vaadin/</span> — the starting Spring&nbsp;Boot + Vaadin + Maven app</li>
+          <li><span class="mono">agent-skills/</span> — the Vaadin skills plugin (+ Vaadin docs MCP)</li>
+        </ul>
+      </div>
+
+      <div class="arrow"><span class="lbl">seed.js · beforeAll — build 3 fresh workspaces, strip rubric.md, bake a port each</span><span class="v">▼</span></div>
+
+      <!-- PHASE 1 -->
+      <div class="phaseblk phase1">
+        <div class="phasehd">
+          <div class="t"><span class="ph1">PHASE 1 · SOLVE</span> — three agents build the app</div>
+          <div class="file">promptfooconfig.yaml &nbsp;·&nbsp; one eval</div>
+        </div>
+        <div class="lanes">
+          <div class="lane codex">
+            <div class="top"><span class="chip"><span class="dot d-codex"></span><span class="c-codex">codex</span></span><span class="port">:8081</span></div>
+            <small><span class="mono">openai:codex:gpt-5.5</span><br>Vaadin skills symlinked into <span class="mono">.agents/skills</span> for parity. Playwright + Vaadin-docs MCP.</small>
+          </div>
+          <div class="lane claude">
+            <div class="top"><span class="chip"><span class="dot d-claude"></span><span class="c-claude">claude</span></span><span class="port">:8082</span></div>
+            <small><span class="mono">anthropic:claude-code</span><br>Opus 4.8, loads the <strong>Vaadin agent-skills plugin</strong> + docs MCP. Playwright MCP.</small>
+          </div>
+          <div class="lane noskills">
+            <div class="top"><span class="chip"><span class="dot d-noskills"></span><span class="c-noskills">claude-no-skills</span></span><span class="port">:8083</span></div>
+            <small><span class="mono">anthropic:claude-code</span><br><strong>Baseline:</strong> identical to <em>claude</em> but <u>no</u> skills, <u>no</u> docs MCP. Isolates the skills' effect.</small>
+          </div>
+        </div>
+        <div class="innerbox">
+          <div class="ib-t">each writes <span class="mono">app/</span> in place → then the row's assertion runs</div>
+          <strong class="mono">grade_static.py</strong> — deterministic <em>source gate</em>: reads the Java, checks the
+          rubric items you can verify by reading code (<span class="mono">@Route</span>, Horizontal/VerticalLayout,
+          Scroller, no inline styles, no leaked TSX). Also emits the <strong>solver trace</strong> columns
+          (skill_calls, mcp_calls, num_turns, solve_seconds, cache_read_ktokens…) — diagnostics, not pass/fail.
+        </div>
+      </div>
+
+      <div class="arrow"><span class="lbl">seed_verify.js · beforeAll — restore rubric.md into each workspace · clear stale verdicts · free the baked ports</span><span class="v">▼</span></div>
+
+      <!-- PHASE 2 -->
+      <div class="phaseblk phase2">
+        <div class="phasehd">
+          <div class="t"><span class="ph2">PHASE 2 · VERIFY</span> — one grader agent per solved workspace</div>
+          <div class="file">verify.yaml &nbsp;·&nbsp; a SEPARATE eval</div>
+        </div>
+        <div class="lanes">
+          <div class="lane codex">
+            <div class="top"><span class="chip"><span class="dot" style="background:var(--violet)"></span><span class="c-violet">verify-codex</span></span><span class="port">→ codex ws</span></div>
+            <small>grades <span class="mono">workspaces/codex</span></small>
+          </div>
+          <div class="lane claude">
+            <div class="top"><span class="chip"><span class="dot" style="background:var(--violet)"></span><span class="c-violet">verify-claude</span></span><span class="port">→ claude ws</span></div>
+            <small>grades <span class="mono">workspaces/claude</span></small>
+          </div>
+          <div class="lane noskills">
+            <div class="top"><span class="chip"><span class="dot" style="background:var(--violet)"></span><span class="c-violet">verify-claude-no-skills</span></span><span class="port">→ no-skills ws</span></div>
+            <small>grades <span class="mono">workspaces/claude-no-skills</span></small>
+          </div>
+        </div>
+        <div class="innerbox">
+          <div class="ib-t">each is an <span class="mono">anthropic:claude-agent-sdk</span> agent (Opus 4.8, Playwright MCP)</div>
+          Runs <span class="mono">app/run.sh</span>, drives Playwright across viewports, scores against
+          <span class="mono">rubric.md</span>, and returns a <strong>structured JSON verdict</strong>
+          (<span class="mono">output_format</span> schema). Then the row's assertion
+          <strong class="mono">grade_verdict.py</strong> sums the section scores → fraction, passes if it clears the
+          floor (default 60%), and emits per-section <span class="mono">rubric_*</span> columns.
+        </div>
+      </div>
+
+      <div class="arrow"><span class="v">▼</span></div>
+
+      <div class="stage" style="border-color:#cfd8e3;background:#fbfcfe">
+        <p class="stitle">View</p>
+        <strong class="mono">npx promptfoo view</strong> — the two evals appear as <strong>two runs</strong>, the solve
+        columns next to their matching <span class="mono">verify-*</span> columns.
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ AGENTS ============ -->
+  <section id="agents">
+    <h2><span class="num">2</span>The three solvers (and why a baseline)</h2>
+    <p class="sub">All three get the same task and the same Playwright browser. They differ only in <em>who's solving</em> and <em>what Vaadin guidance they carry</em>.</p>
+    <div class="grid3">
+      <div class="card pad">
+        <span class="chip"><span class="dot d-codex"></span><span class="c-codex">codex</span></span>
+        <h3>The OpenAI agent</h3>
+        <p class="lead"><span class="mono">openai:codex:gpt-5.5</span>, full file/command access. Codex has no
+        plugin loader, so <span class="mono">seed.js</span> symlinks the Vaadin skills into its native
+        <span class="mono">.agents/skills/</span> location — apples-to-apples with the Claude row.</p>
+      </div>
+      <div class="card pad">
+        <span class="chip"><span class="dot d-claude"></span><span class="c-claude">claude</span></span>
+        <h3>The skills-equipped agent</h3>
+        <p class="lead"><span class="mono">anthropic:claude-code</span> on Opus 4.8, loading the
+        <strong>Vaadin agent-skills plugin</strong> (layouts, responsive-layouts…) plus the Vaadin docs MCP.
+        This is the "with help" condition.</p>
+      </div>
+      <div class="card pad">
+        <span class="chip"><span class="dot d-noskills"></span><span class="c-noskills">claude-no-skills</span></span>
+        <h3>The control</h3>
+        <p class="lead">Byte-for-byte the same as <em>claude</em>, minus the skills and the docs MCP. The gap
+        between this row and <em>claude</em> <strong>is the benchmark's thesis</strong>: how much do the skills
+        actually move the rubric?</p>
+      </div>
+    </div>
+    <div class="callout">
+      <div class="ct">Each runs isolated, so all three can run together (<code class="in">--max-concurrency 3</code>).</div>
+      Own working dir, own baked server port (8081/8082/8083), and an <code class="in">--isolated</code>
+      in-memory Playwright profile — so no port clashes and no shared browser-lock deadlocks.
+    </div>
+  </section>
+
+  <!-- ============ PHASE 1 ============ -->
+  <section id="phase1">
+    <h2><span class="num">3</span>Phase 1 · Solve <span style="font-size:15px;color:var(--blue);font-weight:600">— promptfooconfig.yaml</span></h2>
+    <p class="sub">Build the workspaces, let the agents solve, then gate on source.</p>
+
+    <div class="grid2">
+      <div class="card pad">
+        <h3 style="margin-top:0"><span class="mono">seed.js</span> — the <code class="in">beforeAll</code> hook</h3>
+        <p class="lead">Before anything runs, for each of the three solvers it (re)creates a fresh workspace:</p>
+        <ul class="tight">
+          <li>copy <span class="mono">task.md</span> + reference PNGs in, copy the Vaadin skeleton into <span class="mono">app/</span></li>
+          <li><strong>strip <span class="mono">rubric.md</span></strong> — the solver must never see how it'll be graded</li>
+          <li>bake the per-provider <span class="mono">server.port</span> into <span class="mono">application.properties</span></li>
+          <li>write <span class="mono">prompt.txt</span> (the task, as the verifier will later read it)</li>
+          <li>for codex only: symlink the Vaadin skills into <span class="mono">.agents/skills/</span></li>
+        </ul>
+      </div>
+      <div class="card pad">
+        <h3 style="margin-top:0"><span class="mono">grade_static.py</span> — the source gate + trace</h3>
+        <p class="lead">A Python assertion on the solve row. It locates the workspace from the <em>provider</em>
+        (not from output text — agentic providers return a chat message, not a path), reads the Java, and runs
+        cheap deterministic checks:</p>
+        <ul class="tight">
+          <li><span class="mono">@Route("basic_layout")</span> present <span class="c-violet">(critical)</span></li>
+          <li>uses HorizontalLayout / VerticalLayout <span class="c-violet">(critical)</span></li>
+          <li>content area uses a Scroller</li>
+          <li>no inline styles in Java or templates · no leaked React/TSX views</li>
+        </ul>
+        <p class="lead" style="margin-top:10px"><strong>Pass</strong> = all critical checks pass. It also attaches the
+        <strong>solver trace</strong> as diagnostic columns.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="ct">Why the trace lives on the Phase-1 rows</div>
+      The trajectory metrics — <span class="mono">skill_calls, mcp_calls, api_archaeology_calls, num_turns,
+      solve_seconds, cache_read_ktokens, output_tokens</span> — describe the <strong>solver</strong>. They're read
+      from the solver row's own provider metadata, so they belong here, not on the verify rows (whose metadata
+      describes the verifier). Per <strong>ADR&nbsp;0002</strong> these are the real DX signal, but they are
+      <em>diagnostic only</em> — they never gate pass/fail.
+    </div>
+  </section>
+
+  <!-- ============ PHASE 2 ============ -->
+  <section id="phase2">
+    <h2><span class="num">4</span>Phase 2 · Verify <span style="font-size:15px;color:var(--violet);font-weight:600">— verify.yaml</span></h2>
+    <p class="sub">A grader <em>agent</em> per workspace — run the app, look at it, score the rubric.</p>
+
+    <div class="grid2">
+      <div class="card pad">
+        <h3 style="margin-top:0"><span class="mono">seed_verify.js</span> — prep before grading</h3>
+        <p class="lead">A second <code class="in">beforeAll</code>, this time for the verify eval. For each workspace it:</p>
+        <ul class="tight">
+          <li><strong>restores <span class="mono">rubric.md</span></strong> — the file phase 1 hid from the solver is now needed by the grader</li>
+          <li>deletes any stale <span class="mono">verify-result.json</span> from a prior run</li>
+          <li>frees the baked port, in case the solver left a dev server running on it</li>
+        </ul>
+        <p class="lead" style="margin-top:10px">This is exactly why the restore can't live in <span class="mono">seed.js</span>:
+        it has to happen <em>after</em> the solve and <em>before</em> the verify.</p>
+      </div>
+      <div class="card pad">
+        <h3 style="margin-top:0">The verifier providers</h3>
+        <p class="lead">Three <span class="mono">anthropic:claude-agent-sdk</span> agents (Opus 4.8, Playwright MCP),
+        one per workspace. Each reads its prompt + rubric, runs <span class="mono">app/run.sh</span>, drives the
+        browser across viewports, and returns its verdict as <strong>structured output</strong>:</p>
+        <pre><span class="c">// output_format JSON schema</span>
+{ "criteria": [
+  { "section": <span class="g">"string"</span>,
+    "score": <span class="y">0</span>, "max-score": <span class="y">0</span>,
+    "bullets": [ {"name","score","feedback"} ] }
+]}</pre>
+        <p class="lead">"Which workspace am I grading?" is answered by <em>which provider row it is</em> — no dynamic
+        config needed.</p>
+      </div>
+    </div>
+
+    <div class="card pad" style="margin-top:16px">
+      <h3 style="margin-top:0"><span class="mono">grade_verdict.py</span> — score the verdict (~30 lines)</h3>
+      <p class="lead">Because the heavy lifting is now the provider's job, this assertion is tiny. It:</p>
+      <ol class="tight">
+        <li>maps the row to its workspace (<span class="mono">verify-codex → workspaces/codex</span>)</li>
+        <li>reads the verdict — <strong>structured output first</strong>, falling back to <span class="mono">verify-result.json</span> on disk</li>
+        <li>sums section scores → normalizes to a 0–1 fraction (handles 21- vs 24-point totals automatically)</li>
+        <li><strong>passes if ≥ floor</strong> (<span class="mono">RUBRIC_PASS_THRESHOLD</span>, default 0.6) and emits per-section <span class="mono">rubric_*</span> columns</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ ROWS ============ -->
+  <section id="rows">
+    <h2><span class="num">5</span>How it looks in <span class="mono" style="font-size:18px">promptfoo view</span>: runs &amp; rows</h2>
+    <p class="sub">In promptfoo, <strong>providers are columns</strong> and <strong>test cases are rows</strong>. Each <code class="in">eval</code> invocation is one <strong>run</strong>.</p>
+
+    <div class="runwrap">
+      <div class="runtbl r1">
+        <div class="cap"><span>RUN 1 · solve</span><span class="tag">promptfooconfig.yaml</span></div>
+        <table>
+          <tr><th>test</th><th>codex</th><th>claude</th><th>no-skills</th></tr>
+          <tr>
+            <td class="mini">basic_layout<br>source gate</td>
+            <td><span class="cell-prov c-codex">codex</span><br><span class="passpill pp-pass">PASS</span><br><span class="mini">+ trace cols</span></td>
+            <td><span class="cell-prov c-claude">claude</span><br><span class="passpill pp-pass">PASS</span><br><span class="mini">+ trace cols</span></td>
+            <td><span class="cell-prov c-noskills">no-skills</span><br><span class="passpill pp-pass">PASS</span><br><span class="mini">+ trace cols</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="runtbl r2">
+        <div class="cap"><span>RUN 2 · verify</span><span class="tag">verify.yaml</span></div>
+        <table>
+          <tr><th>test</th><th>verify-codex</th><th>verify-claude</th><th>verify-no-skills</th></tr>
+          <tr>
+            <td class="mini">rubric<br>verdict</td>
+            <td><span class="cell-prov c-violet">v-codex</span><br><span class="passpill pp-pass">0.91</span><br><span class="mini">+ rubric_* cols</span></td>
+            <td><span class="cell-prov c-violet">v-claude</span><br><span class="passpill pp-pass">0.95</span><br><span class="mini">+ rubric_* cols</span></td>
+            <td><span class="cell-prov c-violet">v-no-skills</span><br><span class="passpill pp-pass">0.78</span><br><span class="mini">+ rubric_* cols</span></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:16px">
+      <div class="callout">
+        <div class="ct">Within one run → all providers are together</div>
+        The three solvers share one run as three columns. So do the three verifiers. There is no "three separate
+        rows for the three agents" — it's one row, three provider columns.
+      </div>
+      <div class="callout warn">
+        <div class="ct">Across the two runs → solve ≠ verify</div>
+        Solve and verify are <strong>two separate evals</strong> (two run entries). The only thing tying a solve
+        to its grade is the label: <span class="mono">codex ↔ verify-codex</span>. And <code class="in">REPEAT=n</code>
+        produces <strong>2 × n</strong> runs.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHY PROVIDER ============ -->
+  <section id="why">
+    <h2><span class="num">6</span>Why the verifier is a provider, not an assertion</h2>
+    <p class="sub">This is the change this branch (<span class="mono">reframe-verifier-as-provider</span>, PR #15) exists to make. The earlier port did the opposite, and it hurt.</p>
+
+    <table>
+      <tr><th></th><th>Old — verifier inside an assertion <span class="mini">(grade_rubric.py)</span></th><th>Now — verifier is a provider <span class="mini">(verify.yaml)</span></th></tr>
+      <tr>
+        <td><strong>Verifier cost / tokens / latency</strong></td>
+        <td class="bad">Invisible — a subprocess promptfoo can't see. ~half of every run was off the books.</td>
+        <td class="good">Native promptfoo columns (the <span class="mono">verify-*</span> rows).</td>
+      </tr>
+      <tr>
+        <td><strong>Retries / timeout / concurrency</strong></td>
+        <td class="bad">~400 lines re-implementing the provider runner by hand.</td>
+        <td class="good">promptfoo owns it. <span class="mono">grade_verdict.py</span> shrank to ~30 lines.</td>
+      </tr>
+      <tr>
+        <td><strong>The verdict</strong></td>
+        <td class="bad">Disk round-trip + a class of silent-zero failures ("did it write the JSON?").</td>
+        <td class="good">A structured-output return value (JSON file kept only as a fallback).</td>
+      </tr>
+      <tr>
+        <td><strong>Isolated <span class="mono">CLAUDE_CONFIG_DIR</span></strong></td>
+        <td class="bad">A per-workspace <span class="mono">.claude-home</span> the subprocess needed.</td>
+        <td class="good">Gone — the provider authenticates normally, so the token is now optional.</td>
+      </tr>
+    </table>
+
+    <h3>Why not just <span class="mono">llm-rubric</span> (the obvious "one row" answer)?</h3>
+    <div class="grid2">
+      <div class="card pad">
+        <p class="lead" style="margin:0"><strong><span class="mono">llm-rubric</span> feeds the grader plain text.</strong>
+        It can't start a Spring Boot server or drive Playwright — but this rubric is about how the rendered app
+        <em>looks and behaves</em> across viewports. A text grader can't see that.</p>
+      </div>
+      <div class="card pad">
+        <p class="lead" style="margin:0"><strong>A single grading provider has a static <span class="mono">working_dir</span>.</strong>
+        It couldn't point at a different workspace per row. "One verifier provider per workspace" sidesteps both
+        problems — verification here is provider-shaped work.</p>
+      </div>
+    </div>
+    <div class="callout good">
+      <div class="ct">So "combine solve + verify into one row" would mean re-burying the verifier's cost.</div>
+      The two-run shape isn't overhead to clean up — it's the thing that makes the verifier's cost a first-class,
+      measurable part of a benchmark whose entire point is measuring DX cost.
+    </div>
+  </section>
+
+  <!-- ============ AUTH ============ -->
+  <section id="auth">
+    <h2><span class="num">7</span>Authentication — what <span class="mono" style="font-size:18px">run.sh</span> does</h2>
+    <p class="sub">Both phases are Claude/Codex agents, so both need auth. <code class="in">run.sh</code> resolves <strong>one</strong> credential and injects it into the bench process only — never your shell or rc files.</p>
+    <div class="grid2">
+      <div class="card pad">
+        <h3 style="margin-top:0">Two modes — you pick by which credential you supply</h3>
+        <dl class="kv">
+          <dt>sk-ant-api…</dt><dd>→ <span class="mono">ANTHROPIC_API_KEY</span> · bills the <strong>API key</strong> (solver + verifier)</dd>
+          <dt>sk-ant-oat…</dt><dd>→ <span class="mono">CLAUDE_CODE_OAUTH_TOKEN</span> · bills your <strong>subscription</strong></dd>
+        </dl>
+        <p class="lead" style="margin-top:12px">The chosen var is set and the other unset, so exactly one credential is live — no precedence surprises.</p>
+      </div>
+      <div class="card pad">
+        <h3 style="margin-top:0">It's optional now</h3>
+        <p class="lead">Source order (first hit wins): <span class="mono">$ANTHROPIC_API_KEY</span> →
+        <span class="mono">$CLAUDE_CODE_OAUTH_TOKEN</span> → <span class="mono">basic_layout/.bench-token</span>.</p>
+        <p class="lead">If none is found it <strong>warns and continues</strong>, falling back to your existing
+        Claude Code / Codex login (Keychain). Supply a credential only to override that — API-key billing, or a
+        login-less CI box.</p>
+        <div class="callout warn" style="margin:10px 0 0">
+          <div class="ct">Why this used to be required</div>
+          The old subprocess verifier ran with an isolated config dir that couldn't read the Keychain. As a
+          provider, it can — so the token went from mandatory to optional.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RUN ============ -->
+  <section id="run">
+    <h2><span class="num">8</span>Running it</h2>
+    <pre><span class="c"># solve, then verify — one full pipeline pass</span>
+bash basic_layout/run.sh
+
+<span class="c"># run the whole pipeline 3× for variance (each row is a ~30-min agentic pass)</span>
+REPEAT=3 bash basic_layout/run.sh
+
+<span class="c"># one agent only (anchor the regex — the verify ids all contain "claude")</span>
+bash basic_layout/run.sh --filter-providers <span class="g">'claude$'</span>
+
+<span class="c"># see the two runs side by side</span>
+npx promptfoo@latest view</pre>
+    <div class="callout">
+      <div class="ct">Two flags that matter</div>
+      <code class="in">--no-cache</code> is required — agentic providers cache by prompt, so without it a re-run
+      replays instead of re-solving. <code class="in">--max-concurrency 3</code> runs all three rows in parallel
+      (safe: isolated workspaces, ports, and browsers).
+    </div>
+  </section>
+
+  <!-- ============ FILE MAP ============ -->
+  <section>
+    <h2><span class="num">9</span>File map</h2>
+    <div class="card pad filemap">
+      <div class="row"><span class="fn">promptfooconfig.yaml</span><span>Phase 1 — the three solver providers + the solve test (grade_static.py).</span></div>
+      <div class="row"><span class="fn">verify.yaml</span><span>Phase 2 — the three verifier providers + the verify test (grade_verdict.py). Holds the verdict JSON schema.</span></div>
+      <div class="row"><span class="fn">seed.js</span><span>Phase-1 <code class="in">beforeAll</code>: build fresh workspaces, strip the rubric, bake ports, wire skills.</span></div>
+      <div class="row"><span class="fn">seed_verify.js</span><span>Phase-2 <code class="in">beforeAll</code>: restore the rubric, clear stale verdicts, free ports.</span></div>
+      <div class="row"><span class="fn">grade_static.py</span><span>Solve assertion: source gate (pass/fail) + solver trace columns (diagnostic).</span></div>
+      <div class="row"><span class="fn">grade_verdict.py</span><span>Verify assertion: read structured verdict → fraction → pass/fail + rubric_* columns.</span></div>
+      <div class="row"><span class="fn">run.sh</span><span>The wrapper: resolve auth, warm Maven, run Phase 1 then Phase 2, optionally <code class="in">REPEAT</code>×.</span></div>
+      <div class="row"><span class="fn">workspaces/&lt;agent&gt;/</span><span>Generated per run: <code class="in">app/</code> (the solution), <code class="in">rubric.md</code>, <code class="in">prompt.txt</code>, <code class="in">verify-result.json</code>, screenshot galleries.</span></div>
+      <div class="row"><span class="fn">docs/ADR-verifier-as-provider.md</span><span>The decision record this whole design implements.</span></div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <strong>basic_layout</strong> — agentic-DX benchmark, promptfoo port · branch <span class="mono">reframe-verifier-as-provider</span> (PR&nbsp;#15).
+  Rule of thumb: <em>providers do agentic work; assertions are cheap checks.</em> Everything else follows from that.
+</footer>
+
+</body>
+</html>

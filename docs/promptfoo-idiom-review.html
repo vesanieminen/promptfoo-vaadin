@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Is the Vaadin agent benchmark "promptfooish"? — review</title>
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f7f8fa; --panel2:#eef1f5; --ink:#1a1d23; --muted:#5a6472;
+    --line:#e2e6ec; --accent:#e0356f; --accent2:#2f5bd6; --good:#1a7f37; --warn:#9a6700; --bad:#cf222e;
+    --code-bg:#f5f7fa; --radius:12px;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;
+       font-size:16px;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent2);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px;display:grid;
+        grid-template-columns:240px 1fr;gap:48px}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr;gap:0}.toc{display:none}}
+
+  /* Hero */
+  header.hero{border-bottom:1px solid var(--line);background:
+      radial-gradient(1200px 400px at 20% -10%,rgba(255,93,143,.12),transparent),
+      radial-gradient(900px 400px at 90% -20%,rgba(124,156,255,.12),transparent)}
+  .hero-inner{max-width:1180px;margin:0 auto;padding:54px 24px 40px}
+  .eyebrow{font:600 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+  h1{font-size:clamp(28px,4vw,42px);line-height:1.12;margin:0 0 14px;letter-spacing:-.02em}
+  .sub{color:var(--muted);max-width:70ch;font-size:17px;margin:0}
+  .meta{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px}
+  .pill{font:600 12px/1 var(--mono);padding:7px 11px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:var(--panel)}
+
+  /* TOC */
+  .toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:40px 0;font-size:14px}
+  .toc h4{font:700 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+  .toc ol{list-style:none;margin:0;padding:0;counter-reset:t}
+  .toc li{counter-increment:t;margin:2px 0}
+  .toc a{display:block;color:var(--muted);padding:6px 10px;border-left:2px solid transparent;border-radius:0 6px 6px 0}
+  .toc a:hover{color:var(--ink);text-decoration:none;background:var(--panel)}
+  .toc a.active{color:var(--ink);border-left-color:var(--accent);background:var(--panel)}
+  .toc a::before{content:counter(t) ".";color:var(--accent);font:600 12px/1 var(--mono);margin-right:8px}
+
+  main{padding:40px 0 96px;min-width:0}
+  section{margin:0 0 44px;scroll-margin-top:24px}
+  h2{font-size:24px;letter-spacing:-.01em;margin:0 0 6px;padding-top:14px}
+  h2 .num{font:700 14px/1 var(--mono);color:var(--accent);margin-right:10px;vertical-align:2px}
+  h3{font-size:17px;margin:26px 0 8px;color:#0b0e14}
+  p{margin:12px 0}
+  .lead{font-size:17px;color:#3a4150}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:7px 0}
+  strong{color:#0b0e14}
+  code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);border:1px solid var(--line);
+       padding:.12em .42em;border-radius:6px;color:#c81e63}
+
+  /* Callouts */
+  .callout{border:1px solid var(--line);border-left-width:4px;border-radius:var(--radius);
+           padding:16px 18px;margin:18px 0;background:var(--panel)}
+  .callout .tag{font:700 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;display:block;margin-bottom:8px}
+  .callout p:first-of-type{margin-top:0}.callout p:last-child{margin-bottom:0}
+  .c-verdict{border-left-color:var(--accent)}.c-verdict .tag{color:var(--accent)}
+  .c-good{border-left-color:var(--good)}.c-good .tag{color:var(--good)}
+  .c-warn{border-left-color:var(--warn)}.c-warn .tag{color:var(--warn)}
+  .c-bad{border-left-color:var(--bad)}.c-bad .tag{color:var(--bad)}
+  blockquote{margin:16px 0;padding:10px 18px;border-left:3px solid var(--accent);background:var(--panel);
+             color:#3a4150;font-style:italic;border-radius:0 8px 8px 0}
+
+  /* Code blocks */
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:var(--radius);
+      padding:16px 18px;overflow:auto;margin:16px 0;font-size:13.5px;line-height:1.55}
+  pre code{background:none;border:0;padding:0;color:#2d333b;font-size:inherit}
+  .cmt{color:#7a828f}.kw{color:#c81e63}.str{color:#0a7d33}.key{color:#1f6feb}.arrow{color:var(--accent)}
+
+  /* Table */
+  .scroll{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);margin:18px 0}
+  table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--panel2);font:700 12px/1.2 var(--mono);letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+  tbody tr:last-child td{border-bottom:0}
+  td .v{color:var(--good);font-weight:700}.td-mut{color:var(--muted)}
+
+  .badge{display:inline-block;font:700 11px/1 var(--mono);padding:4px 8px;border-radius:6px;border:1px solid}
+  .b-keep{color:var(--good);border-color:rgba(63,185,80,.4);background:rgba(63,185,80,.1)}
+  .b-fix{color:var(--bad);border-color:rgba(248,81,73,.4);background:rgba(248,81,73,.1)}
+  .b-nice{color:var(--warn);border-color:rgba(227,179,65,.4);background:rgba(227,179,65,.1)}
+
+  hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+  .footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding:24px;text-align:center}
+  .src{display:grid;gap:8px}
+  .src a{display:block;padding:11px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+  .src a:hover{border-color:var(--accent2);text-decoration:none}
+  .src .u{display:block;color:var(--muted);font:12px/1.3 var(--mono);margin-top:3px;word-break:break-all}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.two{grid-template-columns:1fr}}
+  .card{border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;background:var(--panel)}
+  .card h3{margin-top:0}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Architecture review</p>
+    <h1>Is the Vaadin coding-agent benchmark<br>built “the&nbsp;promptfoo&nbsp;way”?</h1>
+    <p class="sub">A review of the <code>promptfoo</code> port of the <code>agentic-dx-improvement</code> benchmark,
+       measured against promptfoo’s own idioms for evaluating coding agents — and where the old harness’s shape
+       is still forcing a round peg into a square hole.</p>
+    <div class="meta">
+      <span class="pill">repo · /code/promptfoo</span>
+      <span class="pill">focus · basic_layout</span>
+      <span class="pill">2026-06-08</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="toc">
+    <h4>Contents</h4>
+    <ol>
+      <li><a href="#verdict">Short answer</a></li>
+      <li><a href="#idiomatic">Already idiomatic</a></li>
+      <li><a href="#problem">The real problem</a></li>
+      <li><a href="#reframe">The reframe</a></li>
+      <li><a href="#wins">Smaller idiom wins</a></li>
+      <li><a href="#keep">Keep custom</a></li>
+      <li><a href="#scorecard">Scorecard</a></li>
+      <li><a href="#recommendation">Recommendation</a></li>
+      <li><a href="#sources">Sources</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <section id="verdict">
+      <h2><span class="num">01</span>Short answer</h2>
+      <p class="lead">Your instinct is half right.</p>
+      <div class="callout c-verdict">
+        <span class="tag">Verdict</span>
+        <p>The <strong>solver side is already idiomatic</strong> — you’re doing essentially what promptfoo’s
+        “Evaluate Coding Agents” guide prescribes. The <strong>one place the round peg is jammed into the square
+        hole is <code>grade_rubric.py</code>: it runs an entire second coding agent (the verifier) as a subprocess
+        <em>inside a Python assertion</em>.</strong></p>
+        <p>That’s where the old <code>agentic-dx-improvement</code> harness shape (<code>verify_task.sh</code>) is
+        still bleeding through. promptfoo’s mental model is <em>“providers do agentic work; assertions are cheap
+        checks on what a provider returned.”</em> You’ve inverted that for the verifier — it’s an agent modeled as
+        an assertion.</p>
+      </div>
+    </section>
+
+    <section id="idiomatic">
+      <h2><span class="num">02</span>What’s already “the promptfoo way”</h2>
+      <p>These match the guide almost exactly, so the round-peg worry doesn’t apply. <strong>Don’t touch them.</strong></p>
+      <div class="callout c-good">
+        <span class="tag">Keep as-is</span>
+        <ul>
+          <li><strong>Solvers as native agentic providers</strong> (<code>anthropic:claude-code</code>,
+              <code>openai:codex</code>) — the guide’s Tier-1 SDK pattern verbatim. You correctly killed <code>solve.sh</code>.</li>
+          <li><strong>Multi-agent A/B</strong> via multiple providers + one shared test suite — exactly the guide’s “compare agents” pattern.</li>
+          <li><strong>Per-provider <code>working_dir</code></strong>, MCP servers, and plugins/skills declared in provider config.</li>
+          <li><strong><code>seed.js</code> as a <code>beforeAll</code> extension</strong> — extensions are the <em>sanctioned</em> setup/teardown hook.</li>
+          <li><strong><code>weight</code> + <code>threshold</code></strong> on assertions.</li>
+          <li><strong><code>run.sh</code> credential injection, Maven warm, <code>--no-cache</code></strong> — legitimate environmental glue (the guide itself says use <code>--no-cache</code> during dev), not an anti-pattern.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="problem">
+      <h2><span class="num">03</span>The real problem: the verifier is a provider wearing an assertion costume</h2>
+      <p><code>grade_rubric.py</code> reimplements ~400 lines of what promptfoo’s provider runner already gives you for
+      free — timeout, retries, port freeing, isolated home, stream-json log capture — because promptfoo can’t see
+      <em>into</em> a subprocess you spawn from an assertion.</p>
+
+      <p>The most damning symptom is in your own docstring:</p>
+      <blockquote>“the agentic verifier this grader spawns runs as a subprocess, invisible to promptfoo, so its
+      tool calls are not counted here (nor is its cost).”</blockquote>
+
+      <div class="callout c-bad">
+        <span class="tag">Why this matters</span>
+        <p>For a <strong>DX benchmark whose entire point is measuring cost / tokens / effort</strong>, half the run’s
+        cost being off the books is a <strong>substantive measurement gap</strong>, not just a style nit. That alone
+        justifies the reframe.</p>
+      </div>
+
+      <p>Secondary symptoms, all consequences of the same inversion:</p>
+      <ul>
+        <li>No caching, retry, parallelism, or tracing from promptfoo — you hand-rolled all of it.</li>
+        <li>A whole class of <strong>silent-zero failures</strong> (“did the verifier write <code>verify-result.json</code>?”) you’ve already had to harden against twice.</li>
+        <li>The verdict is a <strong>disk round-trip</strong> (write JSON file → read JSON file) instead of a return value.</li>
+      </ul>
+    </section>
+
+    <section id="reframe">
+      <h2><span class="num">04</span>The reframe: verifier = provider, in a second phase</h2>
+      <p>The verifier <em>is</em> an agent that produces a judgment. So make it a provider. Concretely, a
+      <strong>two-phase run</strong> (orchestrated by <code>run.sh</code>, same as today):</p>
+
+      <div class="two">
+        <div class="card">
+          <h3>Phase 1 — <code>promptfooconfig.yaml</code></h3>
+          <p>Solvers solve, exactly as now. <strong>Output:</strong> the seeded workspaces on disk.</p>
+        </div>
+        <div class="card">
+          <h3>Phase 2 — <code>verify.yaml</code></h3>
+          <p>The <strong>verifier is the provider</strong> — one per solved workspace. Assertions become trivial
+          checks on its structured verdict.</p>
+        </div>
+      </div>
+
+      <pre><code><span class="cmt"># verify.yaml — phase 2: the verifier graded as a first-class provider</span>
+<span class="key">providers</span>:
+  - <span class="key">id</span>: anthropic:claude-agent-sdk
+    <span class="key">label</span>: verify-codex
+    <span class="key">config</span>:
+      <span class="key">working_dir</span>: workspaces/codex        <span class="cmt"># the solved app</span>
+      <span class="key">mcp</span>: { <span class="key">servers</span>: [ playwright ] }
+      <span class="key">output_format</span>: &lt;rubric JSON schema&gt;   <span class="arrow">#</span> <span class="cmt">structured verdict, no disk round-trip</span>
+  - <span class="key">id</span>: anthropic:claude-agent-sdk
+    <span class="key">label</span>: verify-claude
+    <span class="key">config</span>: { <span class="key">working_dir</span>: workspaces/claude, ... }
+
+<span class="key">prompts</span>: [ file://verify_prompt.md ]
+
+<span class="key">tests</span>:
+  - <span class="key">assert</span>:
+      - <span class="key">type</span>: is-json              <span class="cmt"># verdict shape</span>
+      - <span class="key">type</span>: javascript           <span class="cmt"># tiny: pull score, check the floor</span>
+        <span class="key">value</span>: <span class="str">"return output.total / output.max &gt;= 0.6"</span>
+      - <span class="key">type</span>: cost                 <span class="arrow">#</span> <span class="cmt">NOW promptfoo tracks verifier cost</span>
+        <span class="key">threshold</span>: 0.5
+      - <span class="key">type</span>: latency
+        <span class="key">threshold</span>: 600000</code></pre>
+
+      <h3>What this buys you</h3>
+      <div class="callout c-good">
+        <span class="tag">Wins</span>
+        <ul>
+          <li><strong>Verifier cost / tokens / turns / trace become first-class promptfoo columns</strong> — the gap closes.</li>
+          <li><code>output_format</code> (JSON-schema structured output, which <code>claude-agent-sdk</code> supports)
+              means the verdict comes back <strong>parsed in the response</strong> — no more <code>verify-result.json</code>
+              on disk, no more “did it write the file?” silent-zero.</li>
+          <li>promptfoo owns retries / timeout / caching — <strong>delete most of <code>grade_rubric.py</code></strong>
+              (it shrinks to a ~20-line score check).</li>
+          <li>No cross-config chaining needed (promptfoo has none natively): the <strong>workspace dir on disk
+              <em>is</em> the handoff</strong> — which you already do, just made explicit across two clean
+              provider→assert phases instead of smushed into one assertion.</li>
+        </ul>
+      </div>
+
+      <div class="callout c-warn">
+        <span class="tag">Don’t do this instead</span>
+        <p>Avoid trying to do it with <code>llm-rubric</code> + a custom grading provider: <code>llm-rubric</code>
+        feeds the grader plain <em>text</em> via the Messages API and can’t start a server or drive Playwright, and
+        its grading provider’s <code>working_dir</code> can’t vary per row. “Verifier as its own provider, one per
+        workspace” sidesteps all of that.</p>
+      </div>
+    </section>
+
+    <section id="wins">
+      <h2><span class="num">05</span>Smaller idiom wins you’re leaving on the table</h2>
+
+      <h3>1 · Hand-rolled trace <code>namedScores</code> → native assertions</h3>
+      <p>Your <code>_trace_metrics</code> (skill/tool/turn counts, archaeology, denials) partly reinvents what
+      promptfoo now exposes natively: <strong><code>cost</code> / <code>latency</code> assertions</strong> and
+      <strong>trajectory assertions</strong> (<code>trajectory:step-count</code> with a command pattern).
+      “Did it run <code>mvn</code>?”, “did it hit the Vaadin MCP?”, “did it spelunk jars?” are exactly what
+      trajectory asserts are for — <em>assert the path, not just the answer</em>.</p>
+      <div class="callout c-good">
+        <span class="tag">Keep</span>
+        <p>Your one genuinely-justified custom bit is the <strong>cache-token column</strong> — promptfoo’s top-level
+        token columns drop <code>cache_read</code>, which dominates agentic runs. Keep that; drop the rest.</p>
+      </div>
+
+      <h3>2 · No Tier-0 baseline</h3>
+      <p>The guide explicitly recommends a <strong>plain-LLM row</strong> to prove the agent/skills actually add
+      value. You have none — so you currently can’t show that the Vaadin skills move the needle, which is presumably
+      the thesis of the whole benchmark.</p>
+
+      <h3>3 · <code>--repeat 3</code></h3>
+      <p>Agentic runs are non-deterministic; a single sample per agent is noisy. The guide flags this.</p>
+    </section>
+
+    <section id="keep">
+      <h2><span class="num">06</span>What to <em>keep</em> custom (it’s not all a smell)</h2>
+      <ul>
+        <li><strong><code>grade_static.py</code></strong> is fine as a Python assertion — custom Python asserts are a
+            first-class feature, and it reads workspace <em>files</em> (not <code>output</code>), which native
+            <code>contains</code> can’t. Lightweight, legitimate cheap gate. <em>Not</em> the round peg.</li>
+        <li><strong><code>seed.js</code></strong> and <strong><code>run.sh</code></strong> — keep.</li>
+      </ul>
+    </section>
+
+    <section id="scorecard">
+      <h2><span class="num">07</span>Scorecard</h2>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>Component</th><th>Verdict</th><th>Why</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Solvers as agentic providers</td>
+              <td><span class="badge b-keep">Idiomatic</span></td>
+              <td>Tier-1 SDK pattern straight from the guide.</td>
+            </tr>
+            <tr>
+              <td>Multi-agent A/B in one config</td>
+              <td><span class="badge b-keep">Idiomatic</span></td>
+              <td>Same test suite across providers — the canonical compare.</td>
+            </tr>
+            <tr>
+              <td><code>seed.js</code> (beforeAll)</td>
+              <td><span class="badge b-keep">Idiomatic</span></td>
+              <td>Extensions are the sanctioned setup hook.</td>
+            </tr>
+            <tr>
+              <td><code>grade_static.py</code></td>
+              <td><span class="badge b-keep">OK as custom</span></td>
+              <td>Reads workspace files; lightweight cheap gate.</td>
+            </tr>
+            <tr>
+              <td><code>run.sh</code> auth / Maven / <code>--no-cache</code></td>
+              <td><span class="badge b-keep">OK as glue</span></td>
+              <td>Environmental, not an anti-pattern.</td>
+            </tr>
+            <tr>
+              <td><code>grade_rubric.py</code> runs a verifier agent</td>
+              <td><span class="badge b-fix">Round peg</span></td>
+              <td>Agent modeled as an assertion → cost invisible, fragile, ~400 lines reinvented.</td>
+            </tr>
+            <tr>
+              <td><code>_trace_metrics</code> → <code>namedScores</code></td>
+              <td><span class="badge b-nice">Partly native</span></td>
+              <td>Use <code>cost</code>/<code>latency</code>/trajectory asserts; keep only cache-token col.</td>
+            </tr>
+            <tr>
+              <td>No Tier-0 baseline</td>
+              <td><span class="badge b-nice">Missing</span></td>
+              <td>Can’t prove skills add value without it.</td>
+            </tr>
+            <tr>
+              <td>Single sample per agent</td>
+              <td><span class="badge b-nice">Missing</span></td>
+              <td>Add <code>--repeat 3</code> for noisy agentic runs.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="recommendation">
+      <h2><span class="num">08</span>Recommendation</h2>
+      <div class="callout c-verdict">
+        <span class="tag">Bottom line</span>
+        <p>The current setup is well-engineered and <em>works</em> — this isn’t “you did it wrong,” it’s “one
+        component is modeled inside-out.”</p>
+        <p>If you only do one thing: <strong>promote the verifier from an assertion to a provider in a second phase,
+        with <code>output_format</code> structured output.</strong> It closes the cost-visibility gap (the
+        substantive win), deletes the most fragile ~300 lines you maintain, and removes a whole class of silent-zero
+        failures. The trace-assertion and baseline points are nice-to-haves on top.</p>
+      </div>
+      <p>Next step, if you want it: a draft <code>verify.yaml</code> + the trimmed <code>grade_rubric.py</code>
+      (now a ~20-line score check) + <code>run.sh</code> wired to run both phases — diffable against what you have today.</p>
+    </section>
+
+    <section id="sources">
+      <h2><span class="num">09</span>Sources</h2>
+      <div class="src">
+        <a href="https://www.promptfoo.dev/docs/guides/evaluate-coding-agents/">
+          Evaluate Coding Agents — the canonical guide for this use case
+          <span class="u">promptfoo.dev/docs/guides/evaluate-coding-agents/</span></a>
+        <a href="https://www.promptfoo.dev/docs/providers/claude-agent-sdk/">
+          Claude Agent SDK provider
+          <span class="u">promptfoo.dev/docs/providers/claude-agent-sdk/</span></a>
+        <a href="https://www.promptfoo.dev/docs/providers/custom-api/">
+          Custom providers
+          <span class="u">promptfoo.dev/docs/providers/custom-api/</span></a>
+        <a href="https://www.promptfoo.dev/docs/configuration/expected-outputs/python/">
+          Python assertions
+          <span class="u">promptfoo.dev/docs/configuration/expected-outputs/python/</span></a>
+        <a href="https://www.promptfoo.dev/docs/configuration/expected-outputs/">
+          Assertions / model-graded metrics
+          <span class="u">promptfoo.dev/docs/configuration/expected-outputs/</span></a>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="footer">
+  Review of the <code>promptfoo</code> Vaadin coding-agent benchmark · generated for vesa@vaadin.com
+</div>
+
+<script>
+  // Scrollspy: highlight the current section in the TOC.
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = map.get(e.target.id);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px', threshold: 0 });
+  document.querySelectorAll('main section').forEach(s => obs.observe(s));
+</script>
+</body>
+</html>
