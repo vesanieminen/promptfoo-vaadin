@@ -54,6 +54,7 @@
 #   PROBLEM=basic_form bash bench/run.sh        # one problem (see PROBLEM below)
 #   PROBLEM=basic_form,md_ui_spec bash bench/run.sh
 #   AGENT=claude bash bench/run.sh              # only the claude row(s) — see AGENT
+#   VERIFIER=codex bash bench/run.sh            # grade phase 2 with Codex (see VERIFIER)
 #   REPEAT=3 bash bench/run.sh                  # run the whole thing 3x
 #
 # PROBLEM=<name>[,<name>...] (default: all) — which problem(s) to run; each gets its
@@ -66,10 +67,18 @@
 #   AGENT=claude,claude-no-skills → claude + the no-skills baseline (the skills A/B)
 #   AGENT=codex                   → codex only
 # Valid names: codex, claude, claude-no-skills. (Under the hood this becomes an
-# anchored --filter-providers, because the phase-2 verifiers all share the id
-# anthropic:claude-agent-sdk — so a bare name would over-match the verify rows. You
-# can still pass --filter-providers '<regex>' yourself instead of AGENT if you like;
-# any extra args are forwarded to BOTH phases.)
+# anchored --filter-providers, because each provider LABEL ends with its agent name
+# (solver `claude`, verifier `verify-claude`) while the verifier's provider id
+# (anthropic:claude-agent-sdk, or openai:codex:* when VERIFIER=codex) does NOT — so a
+# bare name would over-match the verify rows. You can still pass --filter-providers
+# '<regex>' yourself instead of AGENT if you like; any extra args go to BOTH phases.)
+#
+# VERIFIER=<claude|codex> (default: claude) picks the PHASE-2 grader (see verify.js):
+#   claude → anthropic:claude-agent-sdk (model pinned claude-opus-4-8) — the default,
+#            keeps results comparable with prior runs / the reproducibility ADR.
+#   codex  → openai:codex:gpt-5.5. NOTE: Codex grades via its OWN login (Codex Keychain
+#            / OPENAI_API_KEY), so VERIFIER=codex needs a Codex login IN ADDITION to the
+#            Claude auth the solvers use. Phase 1 (solve) ignores VERIFIER.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -138,6 +147,15 @@ REPEAT="${REPEAT:-1}"
 # Per-phase --max-concurrency (default 3 = all agent rows at once). Lower it (e.g.
 # MAX_CONCURRENCY=2) to ease load on the machine / browsers / shared ~/.m2.
 MAXC="${MAX_CONCURRENCY:-3}"
+
+# VERIFIER=<claude|codex> (default claude) — the PHASE-2 grader. verify.js reads this
+# from the environment, so we only validate + export it here (phase 1 ignores it).
+export VERIFIER="${VERIFIER:-claude}"
+case "$VERIFIER" in
+  claude) ;;
+  codex) echo "[run] phase-2 verifier: codex (needs a Codex login; solvers still use Claude auth)" >&2 ;;
+  *) echo "[run] ERROR: unknown VERIFIER '$VERIFIER' (valid: claude, codex)." >&2; exit 1 ;;
+esac
 
 # Per-ROW wall-clock ceiling. promptfoo's per-test timeout defaults to 0 (OFF), which
 # lets a wedged agentic subprocess block the whole run indefinitely (observed: a solve

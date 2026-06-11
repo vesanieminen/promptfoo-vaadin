@@ -250,6 +250,7 @@ npx promptfoo@latest view                         # every problem's solve + veri
 PROBLEM=basic_form bash bench/run.sh        # just one problem
 PROBLEM=basic_form,md_ui_spec bash bench/run.sh
 AGENT=claude,claude-no-skills bash bench/run.sh   # narrow the agent rows (the skills A/B)
+VERIFIER=codex bash bench/run.sh                  # grade phase 2 with Codex (default: claude)
 
 # Variance: re-run the whole thing N times (each iteration re-seeds fresh workspaces
 # and shows as its own run in `promptfoo view`). Each row is a ~30-min agentic pass,
@@ -309,7 +310,8 @@ isolated by `seed.js` up front, statically per provider:
 | `PROBLEM` | _(all)_ | **`run.sh`:** which problem(s) to run — one or a comma-list (`basic_layout`, `basic_form`, `md_ui_spec`); default all. **A bare `eval -c …`:** the single problem this eval targets (default `basic_layout`). |
 | `TECHSTACK` | `vaadin` | Skeleton + base-prompt stack |
 | `RUBRIC_PASS_THRESHOLD` | `0.6` | Floor (fraction of max) for `grade_verdict.py` to pass |
-| `AGENT` | _(all)_ | `run.sh` only: which agent row(s) to run — `codex`, `claude`, `claude-no-skills` (comma-list ok) |
+| `AGENT` | _(all)_ | `run.sh` only: which agent row(s) to run — `codex`, `claude`, `claude-no-skills`, `claude-local-mcp` (comma-list ok) |
+| `VERIFIER` | `claude` | PHASE-2 grader: `claude` (`anthropic:claude-agent-sdk`, pinned `claude-opus-4-8`) or `codex` (`openai:codex:gpt-5.5`). Global per run; row labels stay `verify-<solver>`. `codex` grades via its **own** Codex login (`~/.codex/auth.json` / `OPENAI_API_KEY`), needed in addition to the solvers' Claude auth. Phase 1 ignores it. |
 | `REPEAT` | `1` | `run.sh` only: re-run the whole solve+verify pipeline N times |
 | `MAX_CONCURRENCY` | `3` | `run.sh` only: per-phase `--max-concurrency` (3 = all agent rows at once). Lower it (e.g. `2`) to ease load on the machine / browsers / shared `~/.m2`. |
 | `PROMPTFOO_EVAL_TIMEOUT_MS` | `2700000` (45 min/row) | `run.sh` only: per-row wall-clock ceiling — a wedged agentic subprocess is recorded as a timeout and the run moves on (promptfoo's own default is `0` = OFF, which can hang a run indefinitely). Set `=0` to disable. |
