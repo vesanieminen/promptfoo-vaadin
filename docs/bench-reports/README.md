@@ -21,6 +21,7 @@ than what a given run produced.
 | [`bench-results-2026-06-10.html`](bench-results-2026-06-10.html) | 2026-06-10 (`eval-mVK` → `eval-6HA`) | codex · claude · claude-no-skills | Codex tops every rubric but is least idiomatic & ~2.3× the cost; the 480px narrow-viewport bug hits all three |
 | [`bench-results-2026-06-10.md`](bench-results-2026-06-10.md) | 2026-06-10 | — | Markdown twin of the report above (same content, no charts/screenshots) |
 | [`bench-results-2026-06-11.html`](bench-results-2026-06-11.html) | 2026-06-11 (`eval-Q5b` → `eval-ayP`) | claude (hosted MCP) · claude-local-mcp · claude-no-skills | Local Vaadin docs MCP ≈ hosted (no rubric/cost difference); the 480px bug recurs; one row killed by the SDK-hang artifact |
+| [`bench-results-2026-06-11-run2.html`](bench-results-2026-06-11-run2.html) | 2026-06-11 (`eval-RJd` → `eval-DZW`) | claude · claude-local-mcp · claude-no-skills — **graded by Codex** | First run with the phase-2 verifier set to Codex (`gpt-5.5`): the Claude solvers are cross-graded, not self-graded. All clear the 60% floor (local-mcp 94.7% mean); basic_form near-perfect; the 480px bug recurs; two solve rows hung but graded fine in phase 2; Codex verification (~$50) outcosts solving (~$31); the Codex solver produced no rows |
 
 ## How to read a report
 
@@ -39,14 +40,14 @@ runs, all grading is **Claude-judging-Claude** (self-grading).
 
 ## Generating a new one
 
-These are produced by the **`bench-report`** skill (`.claude/skills/bench-report/`). Point it
-at a run's start/end eval (URL or id) on `localhost:15500` and it fetches the evals, extracts
-the numbers, embeds the attached screenshots, and writes the report here. See that skill's
-`SKILL.md` for the workflow and the judgment calls (framing, the SIGTERM-hang artifact, and
-the screenshot-coverage honesty rules).
+These reports are written by prompting Claude Code with a run's start/end eval (URL or id)
+on `localhost:15500`. It reads the eval range from the promptfoo API, extracts the rubric
+scores / costs / per-bullet deductions, embeds the attached result screenshots as inline
+base64, and writes a self-contained HTML file here. Then add a matching card to
+[`index.html`](index.html) and a row to the table above so both indexes stay in sync.
 
-After adding a report, regenerate the landing page so it's linked:
-
-```bash
-python3 .claude/skills/bench-report/scripts/gen_index.py   # rebuilds index.html from the folder
-```
+Judgment calls to get right (the numbers are easy; the framing is the point): identify the
+**actual verifier** (Claude vs Codex) and caveat self- vs cross-grading accordingly; treat a
+timed-out / exit-143 solve row as the **agent-SDK hang** (the workspace built fine and grades
+normally in phase 2 — not a solver failure) rather than a $0 success; and only embed the
+**attached** screenshots, never PNGs pulled off disk (later runs overwrite those workspaces).
