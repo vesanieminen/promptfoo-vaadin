@@ -55,18 +55,33 @@ at 09:02:20 and it kept serving later problems fine.
 **A process-exit / teardown hang, not a stuck task.** After the final turn the subprocess
 should emit its terminal `result` message and exit; it didn't.
 
-The strongest correlate: the hung row is the **only one wired to the local Vaadin MCP**
-(`localhost:18080`). The byte-identical `claude` row (same model, plugin, skills, Playwright —
-differs *only* in remote-vs-local Vaadin MCP) exited cleanly. Prime suspect: a **lingering
-client→`127.0.0.1:18080` keep-alive socket / MCP transport handle that node never
-unref'd or closed**, keeping the event loop alive so the process can't exit.
+### The decisive correlate (two runs): it's the FIRST problem, not a row
 
-**Caveats — leans intermittent.** Within the same 2026-06-11 run, the `claude-local-mcp`
-row hung on `basic_layout` but then **solved `basic_form` and `md_ui_spec` cleanly** — i.e.
-**1 hang in 3 attempts for that exact row/config.** So the hang is *not* deterministic to the
-local MCP; the local-MCP wiring may raise the odds, but the failure looks like an
-**intermittent SDK teardown race** (the hung row was also the *last* of its three to finish).
-Don't commit to the local-MCP theory without the `lsof`/`sample` evidence below.
+Two full runs of the same 3 Claude solvers × 3 problems (`basic_layout` → `basic_form` →
+`md_ui_spec`), one graded by Claude, one by Codex:
+
+| run | `basic_layout` (1st) | `basic_form` (2nd) | `md_ui_spec` (3rd) |
+|-----|----------------------|--------------------|--------------------|
+| 1 (claude grader) | 1 hang (`claude-local-mcp`) | clean | clean |
+| 2 (codex grader)  | **2 hangs** (`claude-no-skills` + `claude-local-mcp`) | clean | clean |
+
+**Every hang landed on the first problem; problems 2 and 3 were 100 % clean both times.**
+That points at a **cold-start cause**, not a row config — the first problem is when the 3 rows
+*concurrently* cold-fetch `@playwright/mcp@latest` via `npx` (racing on the shared npx cache),
+launch chromium for the first time, and open their first MCP connections. By problem 2 those
+are warm and the subprocess exits cleanly.
+
+Per-row susceptibility is a secondary gradient, not the driver: `claude-local-mcp` hung 2/2,
+`claude-no-skills` 1/2, `claude` (remote MCP) 0/2. Crucially **`claude-no-skills` has NO Vaadin
+MCP at all** (Playwright only) — which **kills the earlier "local `:18080` socket" theory.**
+The handle keeping node alive is more likely the **Playwright MCP / `npx` child**, common to
+every row and aggravated by the cold-start race. (Run 1's lone hang happened to be the
+local-MCP row, which is why the first writeup over-fit to it.)
+
+**Still unconfirmed at the handle level.** Capture the `lsof`/`sample` evidence below the next
+time a row hangs to see exactly which fd keeps the loop alive. Note run 2 was unattended, so
+the 45-min auto-timeout recovered both hung rows on its own — which is *why* there was no live
+process to inspect; to get the evidence, watch the first problem of a run live.
 
 ## Recovery
 
@@ -91,7 +106,7 @@ lost on the auto-timeout path too.
 
 Before killing the hung PID:
 ```bash
-lsof -nP -p <pid> | grep -iE 'TCP|PIPE|KQUEUE'   # expect a TCP ESTABLISHED to 127.0.0.1:18080
+lsof -nP -p <pid> | grep -iE 'TCP|PIPE|KQUEUE'   # which fd keeps the loop alive? (playwright-mcp pipe/socket is the suspect)
 sample <pid> 3 -mayDie                            # macOS: node stack — where is it parked?
 ```
 Also check whether promptfoo captured a `response` for the row (result emitted but process
@@ -99,16 +114,27 @@ didn't exit → pure exit/handle bug) vs no response at all.
 
 ## Fix options (ranked)
 
+0. **Pre-warm the cold-start (most targeted — addresses the first-problem correlate).** Before
+   the problem loop, do once what the first problem currently does under concurrent contention:
+   prime the `npx` cache + browser so the solvers don't race on them. e.g. alongside the
+   existing Maven warm in `run.sh`: `npx --yes @playwright/mcp@latest --version` and
+   `npx --yes playwright install chromium` (chromium is already installed, but this forces the
+   npx package fetch/extract to happen serially). If the hang then disappears from problem 1,
+   the cold-start race is confirmed as the cause.
 1. **Idle-watchdog in `run.sh`** — detect a solver PID with ~0% CPU **and** no
    workspace/transcript file changes for N min (e.g. 8–10), then `kill -TERM` it. Automates
-   today's manual fix; recovers in minutes instead of 45. Low risk with a generous N.
+   today's manual fix; recovers in minutes instead of 45. Low risk with a generous N. (Belt-and-
+   braces with #0, since it catches any hang, not just cold-start ones.)
 2. **Tighten `PROMPTFOO_EVAL_TIMEOUT_MS`** — real solves here finished in ≤ ~9–12 min, so
    45 min is very loose. Trade-off: risk killing a genuinely long solve.
 3. **SDK angle** — bump `@anthropic-ai/claude-agent-sdk` (currently `^0.3.160`) and scan
    release notes for MCP-transport teardown / process-exit fixes; look for an option to
    force-close MCP transports on completion. File upstream with the `lsof`/`sample` evidence.
-4. **MCP transport angle** — if the hang is the `:18080` socket, have the local server drop
-   idle connections (`Connection: close` / short keep-alive), or try the other transport
-   (SSE vs streamable-HTTP) and see which one lets the client exit.
-5. **Confirm determinism** — run the `claude-local-mcp` row solo a few times. Reliable hang →
-   local-MCP-specific (chase #4); intermittent → general SDK teardown race (chase #3).
+4. **Playwright-MCP / `npx` angle** — the common factor across hung rows (incl. the
+   Vaadin-MCP-less `claude-no-skills`). Pin `@playwright/mcp` to a fixed version (drop
+   `@latest`) so `npx` resolves from cache without a network round-trip, and/or give each row
+   its own `npx` cache dir to remove the shared-cache race. (Supersedes the old `:18080`-socket
+   theory, which run 2 refuted.)
+5. **Determinism — largely confirmed.** Two runs both hung only on the *first* problem; no need
+   to re-test that. Open question is the exact handle — get it via the `lsof`/`sample` capture
+   above while watching problem 1 live.
