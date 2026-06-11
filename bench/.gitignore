@@ -12,3 +12,6 @@ extracts/
 # key (sk-ant-api...) or a subscription token (sk-ant-oat...). Never commit this —
 # it's a live credential.
 .bench-token
+
+# Timestamped logs + lock from cron-run.sh (the headless nightly driver).
+logs/
