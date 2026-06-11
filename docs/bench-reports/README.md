@@ -41,10 +41,19 @@ runs, all grading is **Claude-judging-Claude** (self-grading).
 ## Generating a new one
 
 These reports are written by prompting Claude Code with a run's start/end eval (URL or id)
-on `localhost:15500`. It reads the eval range from the promptfoo API, extracts the rubric
-scores / costs / per-bullet deductions, embeds the attached result screenshots as inline
-base64, and writes a self-contained HTML file here. Then add a matching card to
-[`index.html`](index.html) and a row to the table above so both indexes stay in sync.
+on `localhost:15500`, then hand-authoring the self-contained HTML here. Start with the data
+helper, which does the tedious, error-prone extraction (but no prose — that's the point):
+
+```bash
+python3 bench/extract_run.py --start <start-eval> --end <end-eval>
+# writes bench/extracts/<end-id>/{run.json, run.md, *.png} and prints run.md
+```
+
+`run.md` gives the rubric scores, costs, per-bullet deductions, the **actual verifier**
+(Claude vs Codex), and flags for hung solve rows / absent solvers; the `*.png` files are the
+attached result screenshots. Author the HTML report from that (inline the screenshots as
+base64), then add a matching card to [`index.html`](index.html) and a row to the table above
+so both indexes stay in sync.
 
 Judgment calls to get right (the numbers are easy; the framing is the point): identify the
 **actual verifier** (Claude vs Codex) and caveat self- vs cross-grading accordingly; treat a

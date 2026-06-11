@@ -3,6 +3,11 @@
 # home, and the verifier's verify-result.json.
 workspaces/
 
+# Per-run data + screenshots written by extract_run.py (run.json, run.md, *.png).
+# Regenerable from the promptfoo evals; the report HTML in docs/bench-reports/ is
+# the committed artifact, not these.
+extracts/
+
 # Run-scoped Claude credential for the bench (see run.sh): either an Anthropic API
 # key (sk-ant-api...) or a subscription token (sk-ant-oat...). Never commit this —
 # it's a live credential.
