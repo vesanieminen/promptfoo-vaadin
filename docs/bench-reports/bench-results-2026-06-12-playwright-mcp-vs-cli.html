@@ -121,11 +121,11 @@
   <a href="#spec">md_ui_spec</a>
   <a href="#obs">Observations</a>
   <a href="#caveats">Caveats</a>
-  <span class="pager"><a href="bench-results-2026-06-11-run3.html" title="Older run — 2026-06-11 · run 3">← Older</a><span style="padding:5px 10px;font-size:13.5px;color:#aab4c0" aria-disabled="true">Newer →</span><a href="index.html" title="All run reports">All ↑</a></span>
+  <span class="pager"><a href="bench-results-2026-06-11-run3.html" title="Older run — 2026-06-11 · run 3">← Older</a><a href="bench-results-2026-06-12-run2-leak-fixed.html" title="Newer — 2026-06-12 run 2 (leak fixed)">Newer →</a><a href="index.html" title="All run reports">All ↑</a></span>
 </div></nav>
 
 <header class="hero">
-  <div class="kicker">benchmark report &middot; 2026-06-12 &middot; 16:20 run</div>
+  <div class="kicker">benchmark report &middot; 2026-06-12 &middot; 16:20 run (run 1)</div>
   <h1>Playwright MCP vs CLI+skills — same Claude, two browser transports</h1>
   <p class="lede">A two-row A/B isolating one variable: how the solver drives the browser. <b>claude</b> wires the
   <b>Playwright MCP</b>; <b>claude-pw-cli</b> drops it and drives the browser through the <b>`playwright-cli`</b>
@@ -140,6 +140,12 @@
 </header>
 
 <div class="wrap">
+
+<div class="note warn" style="margin-top:24px">⚠️ <b>Superseded — this is the leaky run.</b> The MCP row here secretly used the globally-installed
+  <code>playwright-cli</code> on 2 of 3 problems (see §3), so its transport contrast is contaminated. The fix
+  (<code>disallowed_tools</code> on the MCP rows) and the clean numbers are in
+  <b><a href="bench-results-2026-06-12-run2-leak-fixed.html">run 2 (leak fixed) →</a></b>. The leak finding below is still the
+  useful takeaway from this run.</div>
 
 <!-- ===================== TL;DR ===================== -->
 <section id="tldr">
