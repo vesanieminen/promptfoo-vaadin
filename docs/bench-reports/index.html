@@ -64,6 +64,7 @@
   .c-localmcp{color:#2563eb} .d-localmcp{background:#2563eb}
   .c-noskills{color:#db2777} .d-noskills{background:#db2777}
   .c-codex{color:#d97706} .d-codex{background:#d97706}
+  .c-cli{color:#4f46e5} .d-cli{background:#4f46e5}
 
   .lede2{font-size:19px;color:var(--muted);max-width:760px;margin:0}
   .reportgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:18px;margin-top:6px}
@@ -86,9 +87,16 @@
 <h1>Run reports</h1>
 <p class="lede2">One visual report per benchmark sweep — a promptfoo solve&rarr;verify pass over the
 three Vaadin problems. Each links rubric scores, costs, per-problem deductions and the solvers'
-result screenshots. Newest first; 4 reports on file.</p>
+result screenshots. Newest first; 5 reports on file.</p>
 </header><div class="wrap"><section style="border-top:0">
 <div class="reportgrid">
+<div class="report">
+  <div class="rdate">2026-06-12 · 16:20 run</div>
+  <div class="rtitle">agentic-DX bench — Playwright MCP vs CLI+skills</div>
+  <div class="ragents"><span class="chip c-claude"><span class="dot d-claude"></span>claude · Playwright MCP</span><span class="chip c-cli"><span class="dot d-cli"></span>claude-pw-cli · playwright-cli + skill</span></div>
+  <div class="rlede">A two-row A/B isolating one variable — how the solver drives the browser: the Playwright <b>MCP</b> vs the <b>`playwright-cli`</b> command + its bundled skill (everything else identical, Claude-graded). <b>Quality is a tie</b> (means 94.4% vs 93.0%, within noise — CLI wins md_ui_spec, MCP wins basic_form, tie on basic_layout). The CLI is <b>no token-saver here</b> — equal-or-more output tokens on all three, ~5% higher solve cost. Biggest finding: the contrast <b>leaked</b> — because <code>playwright-cli</code> is on PATH, the MCP row used it on 2 of 3 problems (17 CLI / 0 MCP calls each), so only basic_layout is a clean transport cell. The 480px breakpoint bug recurs on both.</div>
+  <div class="rlinks"><a class="btn" href="bench-results-2026-06-12-playwright-mcp-vs-cli.html">Open report →</a></div>
+</div>
 <div class="report">
   <div class="rdate">2026-06-11 · 18:51 run</div>
   <div class="rtitle">agentic-DX bench — 2026-06-11 results (run 3 · Claude-graded)</div>
