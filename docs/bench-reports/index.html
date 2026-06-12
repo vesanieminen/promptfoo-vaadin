@@ -66,9 +66,12 @@
   .c-codex{color:#d97706} .d-codex{background:#d97706}
 
   .lede2{font-size:19px;color:var(--muted);max-width:760px;margin:0}
-  .reportgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:18px;margin-top:6px}
-  .report{position:relative;cursor:pointer;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px;transition:transform .12s ease,box-shadow .12s ease}
+  .reportgrid{display:flex;flex-direction:column;gap:16px;margin-top:6px}
+  .report{position:relative;cursor:pointer;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(230px,1fr);gap:30px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:22px 24px;transition:transform .12s ease,box-shadow .12s ease}
+  @media(max-width:760px){.report{grid-template-columns:1fr;gap:16px}}
   .report:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(16,32,46,.08),0 14px 36px rgba(16,32,46,.12)}
+  .report .rmeta{display:flex;flex-direction:column;min-width:0}
+  .report .rdata{display:flex;flex-direction:column;gap:13px;min-width:0}
   .report .rdate{font:800 13px/1 ui-monospace,monospace;color:var(--indigo);letter-spacing:.06em;text-transform:uppercase}
   .report .rdate .rdur{text-transform:none;letter-spacing:0;color:var(--muted);font-weight:600}
   .report .rtitle{font-size:20px;font-weight:800;letter-spacing:-.01em;margin:8px 0 2px}
@@ -113,11 +116,12 @@
   .chart-tip .ttbar .ttco{margin-left:auto;font-weight:600;opacity:.92}
 
   /* per-card rubric scoreboard — value lives INSIDE the colored bar */
-  .scores{margin:13px 0 2px;display:flex;flex-direction:column;gap:8px}
-  .srow{display:grid;grid-template-columns:84px 1fr;align-items:center;gap:10px}
-  .srow .sname{font:600 11.5px/1.2 ui-monospace,monospace;text-align:right;color:var(--muted);white-space:nowrap;display:inline-flex;align-items:center;gap:5px;justify-content:flex-end;overflow:hidden}
+  .scores{margin:0;display:flex;flex-direction:column;gap:13px}
+  .srow{display:flex;flex-direction:column;gap:6px}
+  .srow .sname{font:600 12px/1.35 ui-monospace,monospace;color:var(--muted);display:flex;align-items:center;gap:7px;min-width:0}
+  .srow .sname b{color:var(--ink);font-weight:800}
   .srow .sname .dot{width:8px;height:8px;border-radius:50%;flex:none}
-  .srow .sbar{position:relative;background:#eef1f5;border-radius:7px;height:21px;overflow:hidden}
+  .srow .sbar{position:relative;width:100%;background:#eef1f5;border-radius:7px;height:21px;overflow:hidden}
   .srow .sbar i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;display:flex;align-items:center;gap:6px;padding:0 9px;min-width:122px;color:#fff;font:700 11px/1 ui-monospace,monospace;letter-spacing:.02em;transition:width .5s ease;white-space:nowrap}
   .srow .sbar i .star{font-size:10.5px;line-height:1}
   .srow .sbar i .sc{font-weight:800;font-size:11.5px}
@@ -127,7 +131,7 @@
   .bg-claude{background:#0d9488}.bg-localmcp{background:#2563eb}.bg-noskills{background:#db2777}.bg-codex{background:#d97706}
   .scap{font-size:10.5px;color:#9aa7b5;margin:7px 0 0;display:flex;justify-content:flex-start;align-items:center;gap:6px;flex-wrap:wrap}
   .scap>span:first-child{margin-right:auto}
-  .gtag{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:999px;white-space:nowrap}
+  .gtag{font:700 12px/1 ui-monospace,monospace;letter-spacing:.03em;text-transform:uppercase;padding:5px 10px;border-radius:999px;white-space:nowrap}
   .gtag.claude{background:#e6f5f3;color:#0a6b62}
   .gtag.codex{background:#fdf0e0;color:#a25c08}
   .gtag.sub{background:#eef2f7;color:#566476}
@@ -203,69 +207,84 @@ result screenshots. Newest first; 5 reports on file.</p>
 <section>
 <div class="reportgrid">
 <div class="report">
-  <div class="rdate">2026-06-12 · 10:46<span class="rdur"> · ~1h 30min</span></div>
-  <div class="rtitle">Dead heat at ~90% — baseline edges it</div>
-  <div class="ragents"><span class="chip c-codex"><span class="dot d-codex"></span>verifier: codex · gpt-5.5</span><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
-  <div class="scores">
-    <div class="srow win"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:90.9%"><span class="star">★</span><span class="sc">90.9%</span><span class="co">$29.06</span></i></span></div>
-    <div class="srow"><span class="sname"><span class="dot bg-localmcp"></span>local-mcp</span><span class="sbar"><i class="bg-localmcp" style="width:90.5%"><span class="sc">90.5%</span><span class="co">$24.77*</span></i></span></div>
-    <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:90.3%"><span class="sc">90.3%</span><span class="co">$26.68</span></i></span></div>
+  <div class="rmeta">
+    <div class="rdate">2026-06-12 · 10:46<span class="rdur"> · ~1h 30min</span></div>
+    <div class="rtitle">Dead heat at ~90% — baseline edges it</div>
+    <div class="rlede">A fourth sweep of the same three Claude variants, Codex-graded (gpt-5.5, cross-grading) with the solvers pinned to medium reasoning effort. The dead heat holds: the three conditions finish within 0.6 pt on the mean (no-skills 90.9% · local-mcp 90.5% · claude 90.3%) and each wins one problem. A non-Claude grader independently flags the recurring 480px narrow-viewport bug (4th sweep) and the plain-Div / FormLayout-over-Composite idiom leaks. Only 1 of 9 solve rows hung this time; Codex verification (~$59) outcost solving (~$21). Not comparable to run 3 — grader and solver effort both changed.</div>
+    <div class="rlinks"><a class="btn" href="bench-results-2026-06-12.html">Open report →</a></div>
   </div>
-  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag codex">Codex-graded</span><span class="gtag eff">effort: medium</span><span class="gtag api">API key</span></div>
-  <div class="rlede">A fourth sweep of the same three Claude variants, Codex-graded (gpt-5.5, cross-grading) with the solvers pinned to medium reasoning effort. The dead heat holds: the three conditions finish within 0.6 pt on the mean (no-skills 90.9% · local-mcp 90.5% · claude 90.3%) and each wins one problem. A non-Claude grader independently flags the recurring 480px narrow-viewport bug (4th sweep) and the plain-Div / FormLayout-over-Composite idiom leaks. Only 1 of 9 solve rows hung this time; Codex verification (~$59) outcost solving (~$21). Not comparable to run 3 — grader and solver effort both changed.</div>
-  <div class="rlinks"><a class="btn" href="bench-results-2026-06-12.html">Open report →</a></div>
+  <div class="rdata">
+    <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-noskills"></span><b>claude-no-skills</b> · baseline</span><span class="sbar"><i class="bg-noskills" style="width:90.9%"><span class="star">★</span><span class="sc">90.9%</span><span class="co">$29.06</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-localmcp"></span><b>claude-local-mcp</b> · skills + local MCP</span><span class="sbar"><i class="bg-localmcp" style="width:90.5%"><span class="sc">90.5%</span><span class="co">$24.77*</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-claude"></span><b>claude</b> · skills + hosted MCP</span><span class="sbar"><i class="bg-claude" style="width:90.3%"><span class="sc">90.3%</span><span class="co">$26.68</span></i></span></div>
+    </div>
+    <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag codex">Codex-graded</span><span class="gtag eff">effort: medium</span><span class="gtag api">API key</span></div>
+  </div>
 </div>
 <div class="report">
-  <div class="rdate">2026-06-11 · 18:51<span class="rdur"> · ~3h 40min</span></div>
-  <div class="rtitle">Skills don't separate — baseline tops it</div>
-  <div class="ragents"><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
-  <div class="scores">
-    <div class="srow win"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:93.4%"><span class="star">★</span><span class="sc">93.4%</span><span class="co">$24.12</span></i></span></div>
-    <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:93.1%"><span class="sc">93.1%</span><span class="co">$12.36*</span></i></span></div>
-    <div class="srow"><span class="sname"><span class="dot bg-localmcp"></span>local-mcp</span><span class="sbar"><i class="bg-localmcp" style="width:92.4%"><span class="sc">92.4%</span><span class="co">$25.32</span></i></span></div>
+  <div class="rmeta">
+    <div class="rdate">2026-06-11 · 18:51<span class="rdur"> · ~3h 40min</span></div>
+    <div class="rtitle">Skills don't separate — baseline tops it</div>
+    <div class="rlede">A third sweep of the same three Claude variants, this time Claude-graded (self-grading; no Codex). The skills edge doesn&#x27;t reproduce: the no-skills baseline posts the top mean (93.4%) and wins basic_layout while the skill variants take basic_form, all three within a point. basic_form near-perfect; the 480px narrow-viewport bug recurs a third time; all three leak idiom points (plain Div over HorizontalLayout, FormLayout over Composite). The SDK hang was rampant — claude hung on all three solves ($0 solve cost recorded) and one verifier row was re-graded.</div>
+    <div class="rlinks"><a class="btn" href="bench-results-2026-06-11-run3.html">Open report →</a></div>
   </div>
-  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
-  <div class="rlede">A third sweep of the same three Claude variants, this time Claude-graded (self-grading; no Codex). The skills edge doesn&#x27;t reproduce: the no-skills baseline posts the top mean (93.4%) and wins basic_layout while the skill variants take basic_form, all three within a point. basic_form near-perfect; the 480px narrow-viewport bug recurs a third time; all three leak idiom points (plain Div over HorizontalLayout, FormLayout over Composite). The SDK hang was rampant — claude hung on all three solves ($0 solve cost recorded) and one verifier row was re-graded.</div>
-  <div class="rlinks"><a class="btn" href="bench-results-2026-06-11-run3.html">Open report →</a></div>
+  <div class="rdata">
+    <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-noskills"></span><b>claude-no-skills</b> · baseline</span><span class="sbar"><i class="bg-noskills" style="width:93.4%"><span class="star">★</span><span class="sc">93.4%</span><span class="co">$24.12</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-claude"></span><b>claude</b> · skills + hosted MCP</span><span class="sbar"><i class="bg-claude" style="width:93.1%"><span class="sc">93.1%</span><span class="co">$12.36*</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-localmcp"></span><b>claude-local-mcp</b> · skills + local MCP</span><span class="sbar"><i class="bg-localmcp" style="width:92.4%"><span class="sc">92.4%</span><span class="co">$25.32</span></i></span></div>
+    </div>
+    <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
+  </div>
 </div>
 <div class="report">
-  <div class="rdate">2026-06-11 · 09:00<span class="rdur"> · ~1h 50min</span></div>
-  <div class="rtitle">First Codex cross-grade — local MCP leads</div>
-  <div class="ragents"><span class="chip c-codex"><span class="dot d-codex"></span>verifier: codex · gpt-5.5</span><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
-  <div class="scores">
-    <div class="srow win"><span class="sname"><span class="dot bg-localmcp"></span>local-mcp</span><span class="sbar"><i class="bg-localmcp" style="width:94.4%"><span class="star">★</span><span class="sc">94.4%</span><span class="co">$27.46</span></i></span></div>
-    <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:91.0%"><span class="sc">91.0%</span><span class="co">$31.35</span></i></span></div>
-    <div class="srow"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:90.6%"><span class="sc">90.6%</span><span class="co">$22.39</span></i></span></div>
+  <div class="rmeta">
+    <div class="rdate">2026-06-11 · 09:00<span class="rdur"> · ~1h 50min</span></div>
+    <div class="rtitle">First Codex cross-grade — local MCP leads</div>
+    <div class="rlede">First sweep to run the new selectable phase-2 verifier as <b>Codex (gpt-5.5)</b>, so the three Claude variants are cross-graded instead of self-graded. All clear the 60% floor (mean: local-mcp 94.7% · claude 91.0% · no-skills 90.7%); basic_form is near-perfect, the 480px narrow-viewport bug recurs on basic_layout, two solve rows hung but graded fine, and Codex verification (~$50) outcosts solving (~$31). The Codex solver produced no rows.</div>
+    <div class="rlinks"><a class="btn" href="bench-results-2026-06-11-run2.html">Open report →</a></div>
   </div>
-  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag codex">Codex-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
-  <div class="rlede">First sweep to run the new selectable phase-2 verifier as <b>Codex (gpt-5.5)</b>, so the three Claude variants are cross-graded instead of self-graded. All clear the 60% floor (mean: local-mcp 94.7% · claude 91.0% · no-skills 90.7%); basic_form is near-perfect, the 480px narrow-viewport bug recurs on basic_layout, two solve rows hung but graded fine, and Codex verification (~$50) outcosts solving (~$31). The Codex solver produced no rows.</div>
-  <div class="rlinks"><a class="btn" href="bench-results-2026-06-11-run2.html">Open report →</a></div>
+  <div class="rdata">
+    <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-localmcp"></span><b>claude-local-mcp</b> · skills + local MCP</span><span class="sbar"><i class="bg-localmcp" style="width:94.4%"><span class="star">★</span><span class="sc">94.4%</span><span class="co">$27.46</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-claude"></span><b>claude</b> · skills + hosted MCP</span><span class="sbar"><i class="bg-claude" style="width:91.0%"><span class="sc">91.0%</span><span class="co">$31.35</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-noskills"></span><b>claude-no-skills</b> · baseline</span><span class="sbar"><i class="bg-noskills" style="width:90.6%"><span class="sc">90.6%</span><span class="co">$22.39</span></i></span></div>
+    </div>
+    <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag codex">Codex-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
+  </div>
 </div>
 <div class="report">
-  <div class="rdate">2026-06-11 · 06:02<span class="rdur"> · ~1h 40min</span></div>
-  <div class="rtitle">Local docs MCP ≈ hosted MCP</div>
-  <div class="ragents"><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
-  <div class="scores">
-    <div class="srow win"><span class="sname"><span class="dot bg-localmcp"></span>local-mcp</span><span class="sbar"><i class="bg-localmcp" style="width:95.1%"><span class="star">★</span><span class="sc">95.1%</span><span class="co">$19.88</span></i></span></div>
-    <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:93.8%"><span class="sc">93.8%</span><span class="co">$23.16</span></i></span></div>
-    <div class="srow"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:92.4%"><span class="sc">92.4%</span><span class="co">$22.19</span></i></span></div>
+  <div class="rmeta">
+    <div class="rdate">2026-06-11 · 06:02<span class="rdur"> · ~1h 40min</span></div>
+    <div class="rtitle">Local docs MCP ≈ hosted MCP</div>
+    <div class="rlede">Today&#x27;s sweep drops Codex and pits three Claude Opus 4.8 variants against the same three Vaadin tasks: skills + hosted docs MCP, skills + local docs MCP, and the no-skills baseline. Same two-phase solve→verify pipeline. The question: does the local MCP change the answer?</div>
+    <div class="rlinks"><a class="btn" href="bench-results-2026-06-11.html">Open report →</a></div>
   </div>
-  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
-  <div class="rlede">Today&#x27;s sweep drops Codex and pits three Claude Opus 4.8 variants against the same three Vaadin tasks: skills + hosted docs MCP, skills + local docs MCP, and the no-skills baseline. Same two-phase solve→verify pipeline. The question: does the local MCP change the answer?</div>
-  <div class="rlinks"><a class="btn" href="bench-results-2026-06-11.html">Open report →</a></div>
+  <div class="rdata">
+    <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-localmcp"></span><b>claude-local-mcp</b> · skills + local MCP</span><span class="sbar"><i class="bg-localmcp" style="width:95.1%"><span class="star">★</span><span class="sc">95.1%</span><span class="co">$19.88</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-claude"></span><b>claude</b> · skills + hosted MCP</span><span class="sbar"><i class="bg-claude" style="width:93.8%"><span class="sc">93.8%</span><span class="co">$23.16</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-noskills"></span><b>claude-no-skills</b> · baseline</span><span class="sbar"><i class="bg-noskills" style="width:92.4%"><span class="sc">92.4%</span><span class="co">$22.19</span></i></span></div>
+    </div>
+    <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
+  </div>
 </div>
 <div class="report">
-  <div class="rdate">2026-06-10<span class="rdur"> · ~1h 20min</span></div>
-  <div class="rtitle">Codex wins every rubric — at ~2× the cost</div>
-  <div class="ragents"><span class="chip c-codex"><span class="dot d-codex"></span>codex · gpt-5.5</span><span class="chip c-claude"><span class="dot d-claude"></span>claude · opus-4-8 + skills</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
-  <div class="scores">
-    <div class="srow win"><span class="sname"><span class="dot bg-codex"></span>codex</span><span class="sbar"><i class="bg-codex" style="width:97.9%"><span class="star">★</span><span class="sc">97.9%</span><span class="co">$42.60</span></i></span></div>
-    <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:94.4%"><span class="sc">94.4%</span><span class="co">$25.17</span></i></span></div>
-    <div class="srow"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:92.3%"><span class="sc">92.3%</span><span class="co">$23.02</span></i></span></div>
+  <div class="rmeta">
+    <div class="rdate">2026-06-10<span class="rdur"> · ~1h 20min</span></div>
+    <div class="rtitle">Codex wins every rubric — at ~2× the cost</div>
+    <div class="rlede">Codex, Claude (with Vaadin skills), and a no-skills Claude baseline each solve three Vaadin Flow tasks; a Claude+Playwright verifier then runs every app and grades it against its rubric. Every row passed — the signal is in the deductions and the cost spread.</div>
+    <div class="rlinks"><a class="btn" href="bench-results-2026-06-10.html">Open report →</a></div>
   </div>
-  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
-  <div class="rlede">Codex, Claude (with Vaadin skills), and a no-skills Claude baseline each solve three Vaadin Flow tasks; a Claude+Playwright verifier then runs every app and grades it against its rubric. Every row passed — the signal is in the deductions and the cost spread.</div>
-  <div class="rlinks"><a class="btn" href="bench-results-2026-06-10.html">Open report →</a></div>
+  <div class="rdata">
+    <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-codex"></span><b>codex</b> · gpt-5.5</span><span class="sbar"><i class="bg-codex" style="width:97.9%"><span class="star">★</span><span class="sc">97.9%</span><span class="co">$42.60</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-claude"></span><b>claude</b> · opus-4-8 + skills</span><span class="sbar"><i class="bg-claude" style="width:94.4%"><span class="sc">94.4%</span><span class="co">$25.17</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-noskills"></span><b>claude-no-skills</b> · baseline</span><span class="sbar"><i class="bg-noskills" style="width:92.3%"><span class="sc">92.3%</span><span class="co">$23.02</span></i></span></div>
+    </div>
+    <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
+  </div>
 </div>
 </div>
 <div class="card pad about" style="margin-top:26px">
