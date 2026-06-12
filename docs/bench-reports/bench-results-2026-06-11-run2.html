@@ -147,6 +147,7 @@
 <tr><td><span class="chip c-claude-no-skills"><span class="dot d-claude-no-skills"></span>no-skills</span></td><td class="n">$7.25</td><td class="n">$15.14</td><td class="n best">$22.39</td></tr>
 </tbody></table></div><div class="stat" style="margin-top:16px"><div class="big">$81.20</div><div class="lbl">total cost for the sweep</div><div class="sm">Codex verify ($50.5) &gt; solve ($30.7); md_ui_spec grading alone ~$30.6. Understated &mdash; 2 hung solve rows recorded $0.</div></div></div></div></section>
 <section id="p-basic_layout"><h2><span class="num">4</span> basic_layout <span class="mini" style="font-weight:400;font-size:15px">&middot; responsive toolbar view</span></h2>
+  <div style="margin:14px 0 2px;padding:12px 16px;background:#f3f6fa;border:1px solid #e3e8ef;border-radius:10px;font-size:13.5px;line-height:1.6;color:#3a4656">📋 <b style="color:#16202e">The task:</b> An app view at <code>/basic_layout</code> with fixed top and bottom toolbars — each grouping components to the left and right — wrapped around one content section that is the <i>only</i> thing allowed to scroll. On a narrow viewport (&lt;380px) every group wraps to its own full-width row.</div>
 <p class="sub">Rubric: <span class="c-claude-local-mcp">local-mcp 21</span> &middot; <span class="c-claude">claude 19</span> &middot; <span class="c-claude-no-skills">no-skills 19</span> of 24. The hardest problem this run: Codex docked all three on narrow-viewport alignment (the 480px breakpoint) and on building toolbars from <code>Div</code>s rather than Vaadin layout components; local-mcp edged ahead by getting scrolling right. <b>Note:</b> the local-mcp and no-skills <em>solve</em> rows hung (timeout, $0/no trace), so their solve metrics below are blank &mdash; the workspaces still graded normally here.</p>
 <div class="card pad" style="margin-bottom:16px"><table><thead><tr><th>solver</th>
 <th class="n">static</th>
@@ -199,6 +200,7 @@
 </div>
 </section>
 <section id="p-basic_form"><h2><span class="num">5</span> basic_form <span class="mini" style="font-weight:400;font-size:15px">&middot; responsive onboarding form</span></h2>
+  <div style="margin:14px 0 2px;padding:12px 16px;background:#f3f6fa;border:1px solid #e3e8ef;border-radius:10px;font-size:13.5px;line-height:1.6;color:#3a4656">📋 <b style="color:#16202e">The task:</b> A reusable onboarding form at <code>/basic_form</code>, capped at 800px wide and centred. Fields sit in two aligned columns at ≥800px and collapse to a single column below ~380px, with required indicators and placeholder text — layout only, no form logic.</div>
 <p class="sub">Rubric: <span class="c-claude">claude 31</span> &middot; <span class="c-claude-local-mcp">local-mcp 31</span> &middot; <span class="c-claude-no-skills">no-skills 30</span> of 31. Near-perfect across the board &mdash; two clean 31/31 sheets from Codex, with no-skills' single lost point on phone-number formatting guidance.</p>
 <div class="card pad" style="margin-bottom:16px"><table><thead><tr><th>solver</th>
 <th class="n">static</th>
@@ -248,6 +250,7 @@
 <p class="mini">No solver screenshots were attached for this problem in this run.</p>
 </section>
 <section id="p-md_ui_spec"><h2><span class="num">6</span> md_ui_spec <span class="mini" style="font-weight:400;font-size:15px">&middot; Employees CRUD from a markdown spec</span></h2>
+  <div style="margin:14px 0 2px;padding:12px 16px;background:#f3f6fa;border:1px solid #e3e8ef;border-radius:10px;font-size:13.5px;line-height:1.6;color:#3a4656">📋 <b style="color:#16202e">The task:</b> An Employees CRUD screen at <code>/employees</code> built to a Markdown UI spec: a <code>Grid</code> beside a 400px edit drawer (a <code>Composite&lt;FormLayout&gt;</code> with First/Last name, Job title, Since and Email) plus Add / Save / Revert / Delete — graded on matching the spec's structure and Vaadin idioms.</div>
 <p class="sub">Rubric: <span class="c-claude-no-skills">no-skills 46</span> &middot; <span class="c-claude-local-mcp">local-mcp 46</span> &middot; <span class="c-claude">claude 45</span> of 48. A tight three-way: all lost exactly 2 points on Vaadin idioms (subclassing <code>FormLayout</code> instead of <code>Composite&lt;FormLayout&gt;</code>, plus Aura/Lumo theme mixing), and claude lost 1 more on dirty-state buttons. The full Employees CRUD &mdash; grid, add dialog, edit drawer, validation &mdash; worked for every solver.</p>
 <div class="card pad" style="margin-bottom:16px"><table><thead><tr><th>solver</th>
 <th class="n">static</th>
