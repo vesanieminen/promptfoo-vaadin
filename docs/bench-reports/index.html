@@ -70,6 +70,7 @@
   .report{position:relative;cursor:pointer;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px;transition:transform .12s ease,box-shadow .12s ease}
   .report:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(16,32,46,.08),0 14px 36px rgba(16,32,46,.12)}
   .report .rdate{font:800 13px/1 ui-monospace,monospace;color:var(--indigo);letter-spacing:.06em;text-transform:uppercase}
+  .report .rdate .rdur{text-transform:none;letter-spacing:0;color:var(--muted);font-weight:600}
   .report .rtitle{font-size:20px;font-weight:800;letter-spacing:-.01em;margin:8px 0 2px}
   .report .ragents{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 10px}
   .report .ragents .chip{white-space:normal;max-width:100%;align-items:flex-start}
@@ -81,39 +82,188 @@
   .report a.btn::after{content:"";position:absolute;inset:0;z-index:1;border-radius:16px}
   .report a.btn.ghost{background:#eef1fb;color:var(--indigo)} .report a.btn.ghost:hover{background:#e3e7fa}
   .about{margin-top:24px} .about ul{margin:6px 0;padding-left:20px} .about li{margin:7px 0;font-size:14.5px}
+
+  /* progression chart */
+  .trendcard{padding:22px 24px 16px}
+  .trend-wrap{overflow-x:auto;margin-top:6px}
+  svg.trend{width:100%;height:auto;min-width:580px;display:block}
+  svg.trend .grid{stroke:#e8edf3;stroke-width:1}
+  svg.trend .axis-lbl{fill:#9aa7b5;font:11px/1 ui-monospace,monospace}
+  svg.trend .xlbl{fill:#5b6b7e;font:700 12px/1 ui-monospace,monospace;text-anchor:middle}
+  svg.trend .band{fill:#fdf3e6}
+  svg.trend polyline{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+  svg.trend circle{stroke:none}
+  svg.trend .ptlbl{font:700 11px/1 ui-monospace,monospace;text-anchor:middle}
+  .trend-legend{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0 0;align-items:center}
+  .trend-legend .lg{display:inline-flex;align-items:center;gap:8px;font:600 12.5px/1 ui-monospace,monospace;color:#3a4656}
+  .trend-legend .ln{width:22px;height:3px;border-radius:2px;display:inline-block}
+  .trend-legend .ln.codex{height:0;border-top:3px dotted #d97706;width:22px}
+  .trend-note{color:#9aa7b5;font-size:12px;margin:10px 0 0;line-height:1.5}
+  .trend-note .sw{display:inline-block;width:11px;height:11px;border-radius:3px;background:#fdf3e6;border:1px solid #f0dcbd;vertical-align:-1px;margin:0 2px}
+  svg.trend .hitcol{fill:transparent;cursor:pointer}
+  svg.trend #guide{pointer-events:none}
+  .chart-tip{position:fixed;z-index:300;pointer-events:none;display:none;background:#16202e;color:#fff;border-radius:11px;padding:12px 13px;box-shadow:0 12px 36px rgba(0,0,0,.32);min-width:232px;font:13px/1.5 -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+  .chart-tip .t-run{font:800 13.5px/1 ui-monospace,monospace}
+  .chart-tip .t-reg{color:#aeb9c6;font-size:11.5px;margin:3px 0 9px}
+  .chart-tip .ttrow{display:grid;grid-template-columns:74px 1fr;gap:9px;align-items:center;margin:5px 0}
+  .chart-tip .ttname{font:700 11px/1 ui-monospace,monospace;text-align:right;color:#cdd6e0;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;justify-content:flex-end}
+  .chart-tip .ttname .tdot{width:8px;height:8px;border-radius:50%;flex:none}
+  .chart-tip .ttbar{height:20px;border-radius:6px;display:flex;align-items:center;gap:5px;padding:0 8px;color:#fff;font:800 11px/1 ui-monospace,monospace;letter-spacing:.02em;white-space:nowrap}
+  .chart-tip .ttbar .tstar{font-size:10px}
+  .chart-tip .ttbar .ttco{margin-left:auto;font-weight:600;opacity:.92}
+
+  /* per-card rubric scoreboard — value lives INSIDE the colored bar */
+  .scores{margin:13px 0 2px;display:flex;flex-direction:column;gap:8px}
+  .srow{display:grid;grid-template-columns:84px 1fr;align-items:center;gap:10px}
+  .srow .sname{font:600 11.5px/1.2 ui-monospace,monospace;text-align:right;color:var(--muted);white-space:nowrap;display:inline-flex;align-items:center;gap:5px;justify-content:flex-end;overflow:hidden}
+  .srow .sname .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .srow .sbar{position:relative;background:#eef1f5;border-radius:7px;height:21px;overflow:hidden}
+  .srow .sbar i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;display:flex;align-items:center;gap:6px;padding:0 9px;min-width:122px;color:#fff;font:700 11px/1 ui-monospace,monospace;letter-spacing:.02em;transition:width .5s ease;white-space:nowrap}
+  .srow .sbar i .star{font-size:10.5px;line-height:1}
+  .srow .sbar i .sc{font-weight:800;font-size:11.5px}
+  .srow .sbar i .co{margin-left:auto;font-weight:600;opacity:.92}
+  .srow.win .sname{color:var(--ink);font-weight:800}
+  .srow.win .sbar i{box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
+  .bg-claude{background:#0d9488}.bg-localmcp{background:#2563eb}.bg-noskills{background:#db2777}.bg-codex{background:#d97706}
+  .scap{font-size:10.5px;color:#9aa7b5;margin:7px 0 0;display:flex;justify-content:flex-start;align-items:center;gap:6px;flex-wrap:wrap}
+  .scap>span:first-child{margin-right:auto}
+  .gtag{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:999px;white-space:nowrap}
+  .gtag.claude{background:#e6f5f3;color:#0a6b62}
+  .gtag.codex{background:#fdf0e0;color:#a25c08}
+  .gtag.sub{background:#eef2f7;color:#566476}
+  .gtag.api{background:#ece9fb;color:#4f46e5}
+  .gtag.eff{background:#eaf4f1;color:#0e7065;text-transform:none}
 </style></head><body>
 <header class="hero"><div class="kicker">agentic-DX bench</div>
 <h1>Run reports</h1>
 <p class="lede2">One visual report per benchmark sweep — a promptfoo solve&rarr;verify pass over the
 three Vaadin problems. Each links rubric scores, costs, per-problem deductions and the solvers'
-result screenshots. Newest first; 4 reports on file.</p>
-</header><div class="wrap"><section style="border-top:0">
+result screenshots. Newest first; 5 reports on file.</p>
+</header><div class="wrap">
+<section style="border-top:0">
+<h2><span class="num">↗</span> Rubric mean by run</h2>
+<p class="sub">Each line is one agent's mean rubric score (% of max, averaged over the three problems) across every sweep, oldest&rarr;newest. Higher is better.</p>
+<div class="card trendcard">
+  <div class="trend-wrap">
+  <svg class="trend" viewBox="0 0 920 348" role="img" aria-label="Rubric mean by run, per agent">
+    <!-- Codex-graded columns (shaded) -->
+    <rect class="band" x="371" y="20" width="210" height="288"></rect>
+    <rect class="band" x="791" y="20" width="129" height="288"></rect>
+    <!-- y gridlines + labels (88–100%) -->
+    <g class="grid">
+      <line x1="56" y1="20"  x2="900" y2="20"></line>
+      <line x1="56" y1="68"  x2="900" y2="68"></line>
+      <line x1="56" y1="116" x2="900" y2="116"></line>
+      <line x1="56" y1="164" x2="900" y2="164"></line>
+      <line x1="56" y1="212" x2="900" y2="212"></line>
+      <line x1="56" y1="260" x2="900" y2="260"></line>
+      <line x1="56" y1="308" x2="900" y2="308"></line>
+    </g>
+    <g class="axis-lbl" text-anchor="end">
+      <text x="42" y="24">100%</text>
+      <text x="42" y="72">98</text>
+      <text x="42" y="120">96</text>
+      <text x="42" y="168">94</text>
+      <text x="42" y="216">92</text>
+      <text x="42" y="264">90</text>
+      <text x="42" y="312">88</text>
+    </g>
+    <!-- x labels -->
+    <g class="xlbl">
+      <text x="56"  y="328">06-10</text>
+      <text x="266" y="328">06-11 a</text>
+      <text x="476" y="328">06-11 b</text>
+      <text x="686" y="328">06-11 c</text>
+      <text x="896" y="328">06-12</text>
+    </g>
+    <!-- no-skills (pink) -->
+    <polyline points="56,204.8 266,202.4 476,245.6 686,178.4 896,238.4" stroke="#db2777"></polyline>
+    <g fill="#db2777"><circle cx="56" cy="204.8" r="5.5"><title>06-10 · claude-no-skills 92.3% · $23.02 total</title></circle><circle cx="266" cy="202.4" r="5.3"><title>06-11 a · claude-no-skills 92.4% · $22.19 total</title></circle><circle cx="476" cy="245.6" r="5.3"><title>06-11 b · claude-no-skills 90.6% · $22.39 total</title></circle><circle cx="686" cy="178.4" r="5.7"><title>06-11 c · claude-no-skills 93.4% · $24.12 total</title></circle><circle cx="896" cy="238.4" r="6.9"><title>06-12 · claude-no-skills 90.9% · $29.06 total</title></circle></g>
+    <!-- local-mcp (blue), runs 2–5 -->
+    <polyline points="266,137.6 476,154.4 686,202.4 896,248" stroke="#2563eb"></polyline>
+    <g fill="#2563eb"><circle cx="266" cy="137.6" r="4.8"><title>06-11 a · claude-local-mcp 95.1% · $19.88 total</title></circle><circle cx="476" cy="154.4" r="6.5"><title>06-11 b · claude-local-mcp 94.4% · $27.46 total</title></circle><circle cx="686" cy="202.4" r="6.0"><title>06-11 c · claude-local-mcp 92.4% · $25.32 total</title></circle><circle cx="896" cy="248" r="5.9"><title>06-12 · claude-local-mcp 90.5% · $24.77* total</title></circle></g>
+    <!-- claude (teal) -->
+    <polyline points="56,154.4 266,168.8 476,236 686,185.6 896,252.8" stroke="#0d9488"></polyline>
+    <g fill="#0d9488"><circle cx="56" cy="154.4" r="6.0"><title>06-10 · claude 94.4% · $25.17 total</title></circle><circle cx="266" cy="168.8" r="5.5"><title>06-11 a · claude 93.8% · $23.16 total</title></circle><circle cx="476" cy="236" r="7.4"><title>06-11 b · claude 91.0% · $31.35 total</title></circle><circle cx="686" cy="185.6" r="3.1"><title>06-11 c · claude 93.1% · $12.36* total</title></circle><circle cx="896" cy="252.8" r="6.3"><title>06-12 · claude 90.3% · $26.68 total</title></circle></g>
+    <!-- codex (amber), run 1 only -->
+    <g fill="#d97706"><circle cx="56" cy="70.4" r="9.9"><title>06-10 · codex 97.9% · $42.60 total</title></circle></g>
+    <!-- transparent hover targets (on top) carrying per-point detail -->
+    <line id="guide" x1="0" x2="0" y1="16" y2="312" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" style="display:none"></line><g class="hits"><rect class="hitcol" data-col="0" x="30" y="20" width="131" height="288"></rect><rect class="hitcol" data-col="1" x="161" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="2" x="371" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="3" x="581" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="4" x="791" y="20" width="129" height="288"></rect></g>
+  </svg>
+  </div>
+  <div class="trend-legend">
+    <span class="lg"><span class="ln" style="background:#0d9488"></span>claude · skills + hosted MCP</span>
+    <span class="lg"><span class="ln" style="background:#2563eb"></span>claude-local-mcp · skills + local MCP</span>
+    <span class="lg"><span class="ln" style="background:#db2777"></span>claude-no-skills · baseline</span>
+    <span class="lg"><span class="ln" style="background:#d97706"></span>codex · gpt-5.5 (06-10 only)</span>
+  </div>
+  <p class="trend-note"><b>Read with care:</b> a shaded column <span class="sw"></span> is <b>Codex-graded</b> (06-11 b, 06-12); the others are <b>Claude self-graded</b>. The grader and — on 06-12 — the solver reasoning effort (medium) both change between runs, so the absolute level is <i>not</i> comparable across the grading regimes. The y-axis is zoomed to 88–100% to make the spread visible; every cell is well above the 60% pass floor. <b>Dot size ∝ total run cost</b> (solve+verify) — hover any point for its exact score, cost and grading regime. <b>n = 1 per cell</b> — treat ±1–2 points as noise.</p>
+</div>
+</section>
+<section>
 <div class="reportgrid">
 <div class="report">
-  <div class="rdate">2026-06-11 · 18:51 run</div>
-  <div class="rtitle">agentic-DX bench — 2026-06-11 results (run 3 · Claude-graded)</div>
+  <div class="rdate">2026-06-12 · 10:46<span class="rdur"> · ~1h 30min</span></div>
+  <div class="rtitle">Dead heat at ~90% — baseline edges it</div>
+  <div class="ragents"><span class="chip c-codex"><span class="dot d-codex"></span>verifier: codex · gpt-5.5</span><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
+  <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:90.9%"><span class="star">★</span><span class="sc">90.9%</span><span class="co">$29.06</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-localmcp"></span>local-mcp</span><span class="sbar"><i class="bg-localmcp" style="width:90.5%"><span class="sc">90.5%</span><span class="co">$24.77*</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:90.3%"><span class="sc">90.3%</span><span class="co">$26.68</span></i></span></div>
+  </div>
+  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag codex">Codex-graded</span><span class="gtag eff">effort: medium</span><span class="gtag api">API key</span></div>
+  <div class="rlede">A fourth sweep of the same three Claude variants, Codex-graded (gpt-5.5, cross-grading) with the solvers pinned to medium reasoning effort. The dead heat holds: the three conditions finish within 0.6 pt on the mean (no-skills 90.9% · local-mcp 90.5% · claude 90.3%) and each wins one problem. A non-Claude grader independently flags the recurring 480px narrow-viewport bug (4th sweep) and the plain-Div / FormLayout-over-Composite idiom leaks. Only 1 of 9 solve rows hung this time; Codex verification (~$59) outcost solving (~$21). Not comparable to run 3 — grader and solver effort both changed.</div>
+  <div class="rlinks"><a class="btn" href="bench-results-2026-06-12.html">Open report →</a></div>
+</div>
+<div class="report">
+  <div class="rdate">2026-06-11 · 18:51<span class="rdur"> · ~3h 40min</span></div>
+  <div class="rtitle">Skills don't separate — baseline tops it</div>
   <div class="ragents"><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
+  <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:93.4%"><span class="star">★</span><span class="sc">93.4%</span><span class="co">$24.12</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:93.1%"><span class="sc">93.1%</span><span class="co">$12.36*</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-localmcp"></span>local-mcp</span><span class="sbar"><i class="bg-localmcp" style="width:92.4%"><span class="sc">92.4%</span><span class="co">$25.32</span></i></span></div>
+  </div>
+  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
   <div class="rlede">A third sweep of the same three Claude variants, this time Claude-graded (self-grading; no Codex). The skills edge doesn&#x27;t reproduce: the no-skills baseline posts the top mean (93.4%) and wins basic_layout while the skill variants take basic_form, all three within a point. basic_form near-perfect; the 480px narrow-viewport bug recurs a third time; all three leak idiom points (plain Div over HorizontalLayout, FormLayout over Composite). The SDK hang was rampant — claude hung on all three solves ($0 solve cost recorded) and one verifier row was re-graded.</div>
   <div class="rlinks"><a class="btn" href="bench-results-2026-06-11-run3.html">Open report →</a></div>
 </div>
 <div class="report">
-  <div class="rdate">2026-06-11 · 09:00 run</div>
-  <div class="rtitle">agentic-DX bench — 2026-06-11 results (Codex verifier)</div>
+  <div class="rdate">2026-06-11 · 09:00<span class="rdur"> · ~1h 50min</span></div>
+  <div class="rtitle">First Codex cross-grade — local MCP leads</div>
   <div class="ragents"><span class="chip c-codex"><span class="dot d-codex"></span>verifier: codex · gpt-5.5</span><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
+  <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-localmcp"></span>local-mcp</span><span class="sbar"><i class="bg-localmcp" style="width:94.4%"><span class="star">★</span><span class="sc">94.4%</span><span class="co">$27.46</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:91.0%"><span class="sc">91.0%</span><span class="co">$31.35</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:90.6%"><span class="sc">90.6%</span><span class="co">$22.39</span></i></span></div>
+  </div>
+  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag codex">Codex-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
   <div class="rlede">First sweep to run the new selectable phase-2 verifier as <b>Codex (gpt-5.5)</b>, so the three Claude variants are cross-graded instead of self-graded. All clear the 60% floor (mean: local-mcp 94.7% · claude 91.0% · no-skills 90.7%); basic_form is near-perfect, the 480px narrow-viewport bug recurs on basic_layout, two solve rows hung but graded fine, and Codex verification (~$50) outcosts solving (~$31). The Codex solver produced no rows.</div>
   <div class="rlinks"><a class="btn" href="bench-results-2026-06-11-run2.html">Open report →</a></div>
 </div>
 <div class="report">
-  <div class="rdate">2026-06-11 · 06:02 run</div>
-  <div class="rtitle">agentic-DX bench — 2026-06-11 results</div>
+  <div class="rdate">2026-06-11 · 06:02<span class="rdur"> · ~1h 40min</span></div>
+  <div class="rtitle">Local docs MCP ≈ hosted MCP</div>
   <div class="ragents"><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
+  <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-localmcp"></span>local-mcp</span><span class="sbar"><i class="bg-localmcp" style="width:95.1%"><span class="star">★</span><span class="sc">95.1%</span><span class="co">$19.88</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:93.8%"><span class="sc">93.8%</span><span class="co">$23.16</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:92.4%"><span class="sc">92.4%</span><span class="co">$22.19</span></i></span></div>
+  </div>
+  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
   <div class="rlede">Today&#x27;s sweep drops Codex and pits three Claude Opus 4.8 variants against the same three Vaadin tasks: skills + hosted docs MCP, skills + local docs MCP, and the no-skills baseline. Same two-phase solve→verify pipeline. The question: does the local MCP change the answer?</div>
   <div class="rlinks"><a class="btn" href="bench-results-2026-06-11.html">Open report →</a></div>
 </div>
 <div class="report">
-  <div class="rdate">2026-06-10</div>
-  <div class="rtitle">agentic-DX bench — 2026-06-10 results</div>
+  <div class="rdate">2026-06-10<span class="rdur"> · ~1h 20min</span></div>
+  <div class="rtitle">Codex wins every rubric — at ~2× the cost</div>
   <div class="ragents"><span class="chip c-codex"><span class="dot d-codex"></span>codex · gpt-5.5</span><span class="chip c-claude"><span class="dot d-claude"></span>claude · opus-4-8 + skills</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
+  <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-codex"></span>codex</span><span class="sbar"><i class="bg-codex" style="width:97.9%"><span class="star">★</span><span class="sc">97.9%</span><span class="co">$42.60</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:94.4%"><span class="sc">94.4%</span><span class="co">$25.17</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:92.3%"><span class="sc">92.3%</span><span class="co">$23.02</span></i></span></div>
+  </div>
+  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
   <div class="rlede">Codex, Claude (with Vaadin skills), and a no-skills Claude baseline each solve three Vaadin Flow tasks; a Claude+Playwright verifier then runs every app and grades it against its rubric. Every row passed — the signal is in the deductions and the cost spread.</div>
   <div class="rlinks"><a class="btn" href="bench-results-2026-06-10.html">Open report →</a></div>
 </div>
@@ -138,4 +288,45 @@ result screenshots. Newest first; 4 reports on file.</p>
 </div>
 </section></div>
 <footer>agentic-DX bench · run reports · add a card per run by hand — see <a href="README.md">README.md</a></footer>
+<div id="chartTip" class="chart-tip"></div>
+<script>(function(){
+  var tip=document.getElementById('chartTip'), guide=document.getElementById('guide');
+  // one entry per run (x-axis value); rows are best-first, mirroring the card scoreboards
+  var T='#0d9488',B='#2563eb',P='#db2777',A='#d97706';
+  var RUNS=[
+    {label:'06-10', cx:56,  note:'Claude self-graded · subscription · effort default', rows:[
+      {n:'codex',c:A,s:'97.9%',co:'$42.60',win:1},{n:'claude',c:T,s:'94.4%',co:'$25.17'},{n:'no-skills',c:P,s:'92.3%',co:'$23.02'}]},
+    {label:'06-11 a', cx:266, note:'Claude self-graded · subscription · effort default', rows:[
+      {n:'local-mcp',c:B,s:'95.1%',co:'$19.88',win:1},{n:'claude',c:T,s:'93.8%',co:'$23.16'},{n:'no-skills',c:P,s:'92.4%',co:'$22.19'}]},
+    {label:'06-11 b', cx:476, note:'Codex-graded (cross-grade) · subscription · effort default', rows:[
+      {n:'local-mcp',c:B,s:'94.4%',co:'$27.46',win:1},{n:'claude',c:T,s:'91.0%',co:'$31.35'},{n:'no-skills',c:P,s:'90.6%',co:'$22.39'}]},
+    {label:'06-11 c', cx:686, note:'Claude self-graded · subscription · effort default', rows:[
+      {n:'no-skills',c:P,s:'93.4%',co:'$24.12',win:1},{n:'claude',c:T,s:'93.1%',co:'$12.36*'},{n:'local-mcp',c:B,s:'92.4%',co:'$25.32'}]},
+    {label:'06-12', cx:896, note:'Codex-graded · API key · effort=medium', rows:[
+      {n:'no-skills',c:P,s:'90.9%',co:'$29.06',win:1},{n:'local-mcp',c:B,s:'90.5%',co:'$24.77*'},{n:'claude',c:T,s:'90.3%',co:'$26.68'}]}
+  ];
+  function rowHTML(x){
+    return '<div class="ttrow"><span class="ttname"><i class="tdot" style="background:'+x.c+'"></i>'+x.n+'</span>'
+      +'<span class="ttbar" style="background:'+x.c+'">'+(x.win?'<span class="tstar">★</span>':'')
+      +'<span class="ttsc">'+x.s+'</span><span class="ttco">'+x.co+'</span></span></div>';
+  }
+  function show(e){
+    var r=RUNS[+e.currentTarget.dataset.col];
+    tip.innerHTML='<div class="t-run">'+r.label+' run</div><div class="t-reg">'+r.note+'</div>'+r.rows.map(rowHTML).join('');
+    tip.style.display='block';
+    guide.setAttribute('x1',r.cx); guide.setAttribute('x2',r.cx); guide.style.display='';
+    move(e);
+  }
+  function move(e){
+    var x=e.clientX+16,y=e.clientY+16,w=tip.offsetWidth,h=tip.offsetHeight;
+    if(x+w>window.innerWidth-8)x=e.clientX-w-16;
+    if(y+h>window.innerHeight-8)y=e.clientY-h-16;
+    tip.style.left=x+'px';tip.style.top=y+'px';
+  }
+  document.querySelectorAll('svg.trend .hitcol').forEach(function(z){
+    z.addEventListener('mouseenter',show);
+    z.addEventListener('mousemove',move);
+    z.addEventListener('mouseleave',function(){tip.style.display='none';guide.style.display='none';});
+  });
+})();</script>
 </body></html>

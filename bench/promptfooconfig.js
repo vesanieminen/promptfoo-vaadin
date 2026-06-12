@@ -107,6 +107,7 @@ function claudeSolver({ label, skills, vaadinMcp }) {
   const config = {
     apiKeyRequired: false, // fall back to subscription (CLAUDE_CODE_OAUTH_TOKEN / login) when ANTHROPIC_API_KEY is unset
     model: 'claude-opus-4-8', // PINNED for reproducibility — only the docs-help differs across rows
+    effort: 'medium', // PINNED — matches codex's model_reasoning_effort so the two agents are compared at the same effort rung (else claude-code defaults to xhigh vs codex's medium)
     working_dir: wd(label),
     permission_mode: 'bypassPermissions',
     allow_dangerously_skip_permissions: true,
@@ -135,6 +136,7 @@ function codexSolver({ label, vaadinMcp }) {
       working_dir: wd(label),
       sandbox_mode: 'danger-full-access', // solving = write files, run mvn, start a server
       skip_git_repo_check: true,
+      model_reasoning_effort: 'medium', // PINNED — parity with the claude rows' effort (codex's own default is also medium, but pin it so the matrix is explicit)
       cli_config: { mcp_servers }, // Codex has no first-class mcp/plugin key; config goes here
     },
   };

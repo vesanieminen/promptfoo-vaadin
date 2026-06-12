@@ -112,7 +112,7 @@
   <a href="#obs">Observations</a>
   <a href="#caveats">Caveats</a>
   <a href="#shots">Screenshots</a>
-  <span class="pager" style="margin-left:auto;display:flex;gap:4px;align-items:center;padding-left:10px;border-left:1px solid var(--line)"><a href="bench-results-2026-06-11-run2.html" title="Older run — 2026-06-11 · 09:00 (Codex verifier)">← Older</a><span style="padding:5px 10px;font-size:13.5px;color:#aab4c0" aria-disabled="true">Newer →</span><a href="index.html" title="All run reports">All ↑</a></span>
+  <span class="pager" style="margin-left:auto;display:flex;gap:4px;align-items:center;padding-left:10px;border-left:1px solid var(--line)"><a href="bench-results-2026-06-11-run2.html" title="Older run — 2026-06-11 · 09:00 (Codex verifier)">← Older</a><a href="bench-results-2026-06-12.html" title="Newer run — 2026-06-12 (Codex verifier · effort=medium)">Newer →</a><a href="index.html" title="All run reports">All ↑</a></span>
 </div></nav>
 
 <header class="hero">
@@ -137,7 +137,7 @@
   <h2><span class="num">1</span> TL;DR</h2>
   <p class="sub">Eval range: <a href="http://localhost:15500/eval/eval-oVM-2026-06-11T18:51:34"><code>eval-oVM</code></a>
   (18:51) → <a href="http://localhost:15500/eval/eval-0ub-2026-06-11T22:19:03"><code>eval-0ub</code></a>
-  (22:35) on <code>localhost:15500</code> · ~3h40m wall-clock (4 of 6 phases ran to the 45-min row cap on hung rows).</p>
+  (22:35) on <code>localhost:15500</code> · ~3h 40min wall-clock (4 of 6 phases ran to the 45-min row cap on hung rows).</p>
 
   <div class="grid3" style="margin-bottom:16px">
     <div class="stat"><div class="big">a dead heat</div><div class="lbl">the headline: skills ≈ baseline</div><div class="sm">means within 1 pt — no-skills 93.4% · claude 93.1% · local-mcp 92.4%</div></div>
@@ -424,7 +424,8 @@
 <footer>
   Source: promptfoo evals <code>eval-oVM</code> … <code>eval-0ub</code> on <code>localhost:15500</code>, 2026-06-11 ·
   three Claude variants, Claude-graded, two-phase solve→verify (<code>bench/README.md</code>) ·
-  <code>md_ui_spec</code>/no-skills re-graded (<code>eval-0ub</code>) after a verifier hang.
+  <code>md_ui_spec</code>/no-skills re-graded (<code>eval-0ub</code>) after a verifier hang ·
+  auth: <b>Claude subscription</b> (<code>CLAUDE_CODE_OAUTH_TOKEN</code>), not the metered API key.
 </footer>
 
 </body>
