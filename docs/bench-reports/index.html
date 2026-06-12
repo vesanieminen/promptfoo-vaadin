@@ -210,7 +210,7 @@ result screenshots. Newest first; 5 reports on file.</p>
   <div class="rmeta">
     <div class="rdate">2026-06-12 · 10:46<span class="rdur"> · ~1h 30min</span></div>
     <div class="rtitle">Dead heat at ~90% — baseline edges it</div>
-    <div class="rlede">A fourth sweep of the same three Claude variants, Codex-graded (gpt-5.5, cross-grading) with the solvers pinned to medium reasoning effort. The dead heat holds: the three conditions finish within 0.6 pt on the mean (no-skills 90.9% · local-mcp 90.5% · claude 90.3%) and each wins one problem. A non-Claude grader independently flags the recurring 480px narrow-viewport bug (4th sweep) and the plain-Div / FormLayout-over-Composite idiom leaks. Only 1 of 9 solve rows hung this time; Codex verification (~$59) outcost solving (~$21). Not comparable to run 3 — grader and solver effort both changed.</div>
+    <div class="rlede">A fourth sweep of the same three Claude variants, Codex-graded (gpt-5.5, cross-grading) with the solvers pinned to medium reasoning effort. The dead heat holds: the three conditions finish within 0.6 pt on the mean (<b class="c-noskills">no-skills 90.9%</b> · <b class="c-localmcp">local-mcp 90.5%</b> · <b class="c-claude">claude 90.3%</b>) and each wins one problem. A non-Claude grader independently flags the recurring 480px narrow-viewport bug (4th sweep) and the plain-Div / FormLayout-over-Composite idiom leaks. Only 1 of 9 solve rows hung this time; Codex verification (~$59) outcost solving (~$21). Not comparable to run 3 — grader and solver effort both changed.</div>
     <div class="rlinks"><a class="btn" href="bench-results-2026-06-12.html">Open report →</a></div>
   </div>
   <div class="rdata">
@@ -226,7 +226,7 @@ result screenshots. Newest first; 5 reports on file.</p>
   <div class="rmeta">
     <div class="rdate">2026-06-11 · 18:51<span class="rdur"> · ~3h 40min</span></div>
     <div class="rtitle">Skills don't separate — baseline tops it</div>
-    <div class="rlede">A third sweep of the same three Claude variants, this time Claude-graded (self-grading; no Codex). The skills edge doesn&#x27;t reproduce: the no-skills baseline posts the top mean (93.4%) and wins basic_layout while the skill variants take basic_form, all three within a point. basic_form near-perfect; the 480px narrow-viewport bug recurs a third time; all three leak idiom points (plain Div over HorizontalLayout, FormLayout over Composite). The SDK hang was rampant — claude hung on all three solves ($0 solve cost recorded) and one verifier row was re-graded.</div>
+    <div class="rlede">A third sweep of the same three Claude variants, this time Claude-graded (self-grading; no Codex). The skills edge doesn&#x27;t reproduce: the <b class="c-noskills">no-skills baseline</b> posts the top mean (<b class="c-noskills">93.4%</b>) and wins basic_layout while the skill variants take basic_form, all three within a point. basic_form near-perfect; the 480px narrow-viewport bug recurs a third time; all three leak idiom points (plain Div over HorizontalLayout, FormLayout over Composite). The SDK hang was rampant — <b class="c-claude">claude</b> hung on all three solves ($0 solve cost recorded) and one verifier row was re-graded.</div>
     <div class="rlinks"><a class="btn" href="bench-results-2026-06-11-run3.html">Open report →</a></div>
   </div>
   <div class="rdata">
@@ -242,7 +242,7 @@ result screenshots. Newest first; 5 reports on file.</p>
   <div class="rmeta">
     <div class="rdate">2026-06-11 · 09:00<span class="rdur"> · ~1h 50min</span></div>
     <div class="rtitle">First Codex cross-grade — local MCP leads</div>
-    <div class="rlede">First sweep to run the new selectable phase-2 verifier as <b>Codex (gpt-5.5)</b>, so the three Claude variants are cross-graded instead of self-graded. All clear the 60% floor (mean: local-mcp 94.7% · claude 91.0% · no-skills 90.7%); basic_form is near-perfect, the 480px narrow-viewport bug recurs on basic_layout, two solve rows hung but graded fine, and Codex verification (~$50) outcosts solving (~$31). The Codex solver produced no rows.</div>
+    <div class="rlede">First sweep to run the new selectable phase-2 verifier as <b>Codex (gpt-5.5)</b>, so the three Claude variants are cross-graded instead of self-graded. All clear the 60% floor (mean: <b class="c-localmcp">local-mcp 94.7%</b> · <b class="c-claude">claude 91.0%</b> · <b class="c-noskills">no-skills 90.7%</b>); basic_form is near-perfect, the 480px narrow-viewport bug recurs on basic_layout, two solve rows hung but graded fine, and Codex verification (~$50) outcosts solving (~$31). The Codex solver produced no rows.</div>
     <div class="rlinks"><a class="btn" href="bench-results-2026-06-11-run2.html">Open report →</a></div>
   </div>
   <div class="rdata">
@@ -258,7 +258,7 @@ result screenshots. Newest first; 5 reports on file.</p>
   <div class="rmeta">
     <div class="rdate">2026-06-11 · 06:02<span class="rdur"> · ~1h 40min</span></div>
     <div class="rtitle">Local docs MCP ≈ hosted MCP</div>
-    <div class="rlede">Today&#x27;s sweep drops Codex and pits three Claude Opus 4.8 variants against the same three Vaadin tasks: skills + hosted docs MCP, skills + local docs MCP, and the no-skills baseline. Same two-phase solve→verify pipeline. The question: does the local MCP change the answer?</div>
+    <div class="rlede">Today&#x27;s sweep drops Codex and pits three Claude Opus 4.8 variants against the same three Vaadin tasks: <b class="c-claude">skills + hosted docs MCP</b>, <b class="c-localmcp">skills + local docs MCP</b>, and the <b class="c-noskills">no-skills baseline</b>. Same two-phase solve→verify pipeline. The question: does the local MCP change the answer?</div>
     <div class="rlinks"><a class="btn" href="bench-results-2026-06-11.html">Open report →</a></div>
   </div>
   <div class="rdata">
@@ -274,7 +274,7 @@ result screenshots. Newest first; 5 reports on file.</p>
   <div class="rmeta">
     <div class="rdate">2026-06-10<span class="rdur"> · ~1h 20min</span></div>
     <div class="rtitle">Codex wins every rubric — at ~2× the cost</div>
-    <div class="rlede">Codex, Claude (with Vaadin skills), and a no-skills Claude baseline each solve three Vaadin Flow tasks; a Claude+Playwright verifier then runs every app and grades it against its rubric. Every row passed — the signal is in the deductions and the cost spread.</div>
+    <div class="rlede"><b class="c-codex">Codex</b>, <b class="c-claude">Claude (with Vaadin skills)</b>, and a <b class="c-noskills">no-skills Claude baseline</b> each solve three Vaadin Flow tasks; a Claude+Playwright verifier then runs every app and grades it against its rubric. Every row passed — the signal is in the deductions and the cost spread.</div>
     <div class="rlinks"><a class="btn" href="bench-results-2026-06-10.html">Open report →</a></div>
   </div>
   <div class="rdata">
