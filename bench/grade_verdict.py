@@ -68,7 +68,9 @@ def _reference_images(workspace):
 # `anthropic:claude-agent-sdk` also contains "claude"), regardless of ordering.
 # Canonical list: the SETUPS labels in bench.js (this Python can't import it — keep the
 # two in sync when adding a solver).
-_WORKSPACES = frozenset(("codex", "claude", "claude-no-skills", "claude-local-mcp"))
+_WORKSPACES = frozenset(
+    ("codex", "claude", "claude-no-skills", "claude-local-mcp", "claude-pw-cli", "codex-pw-cli")
+)
 
 
 def _agent_from_provider(context):

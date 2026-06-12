@@ -65,8 +65,9 @@
 # phases, by plain name — no regex:
 #   AGENT=claude                  → claude only
 #   AGENT=claude,claude-no-skills → claude + the no-skills baseline (the skills A/B)
+#   AGENT=claude,claude-pw-cli    → claude + the Playwright CLI variant (the MCP-vs-CLI A/B)
 #   AGENT=codex                   → codex only
-# Valid names: codex, claude, claude-no-skills. (Under the hood this becomes an
+# Valid names: the bench.SETUPS labels (see `_known` below). (Under the hood this becomes an
 # anchored --filter-providers, because each provider LABEL ends with its agent name
 # (solver `claude`, verifier `verify-claude`) while the verifier's provider id
 # (anthropic:claude-agent-sdk, or openai:codex:* when VERIFIER=codex) does NOT — so a
@@ -172,7 +173,7 @@ export PROMPTFOO_EVAL_TIMEOUT_MS="${PROMPTFOO_EVAL_TIMEOUT_MS:-2700000}"
 # `set --` injection keeps this bash-3.2 safe (no empty-array expansion under set -u).
 if [ -n "${AGENT:-}" ]; then
   AGENT="${AGENT// /}"              # tolerate spaces, e.g. AGENT="claude, codex"
-  _known="codex claude claude-no-skills claude-local-mcp"   # = bench.SETUPS labels (keep in sync)
+  _known="codex claude claude-no-skills claude-local-mcp claude-pw-cli codex-pw-cli"   # = bench.SETUPS labels (keep in sync)
   IFS=',' read -ra _want <<< "$AGENT"
   for _a in "${_want[@]}"; do
     case " $_known " in

@@ -51,6 +51,11 @@ const BASE_PROMPT_FILE = path.join(AGENTIC_DX_DIR, 'problems', `base_prompt_${TE
 // Codex workspace's `.agents/skills/` (Codex's own discovery location) for parity.
 const SKILLS_DIR = path.join(AGENTIC_DX_DIR, 'agent-skills', 'skills');
 const AGENT_SKILLS_ROOT = path.join(AGENTIC_DX_DIR, 'agent-skills'); // plugin root: holds .mcp.json + .claude-plugin/plugin.json
+// The bundled playwright-cli skill (this repo, not the agentic-dx checkout). Codex CLI
+// rows (`playwright: 'cli'`) get it seeded into `.agents/skills/playwright-cli`, the
+// same way the Vaadin skills are; the Claude CLI rows load it via a plugin in
+// promptfooconfig.js. See bench/playwright-cli-plugin/README.md.
+const PLAYWRIGHT_CLI_SKILL_DIR = path.join(HERE, 'playwright-cli-plugin', 'skills', 'playwright-cli');
 
 // One workspace per solver provider, namespaced under the problem
 // (workspaces/<problem>/<agent>) so all problems coexist on disk and in `promptfoo
@@ -59,8 +64,8 @@ const AGENT_SKILLS_ROOT = path.join(AGENTIC_DX_DIR, 'agent-skills'); // plugin r
 // provider->workspace map re-derive the SAME layout from PROBLEM + bench.js.
 //   claude-no-skills is the BASELINE row: same agentic Claude solver, but WITHOUT
 //   the Vaadin agent-skills plugin / docs MCP — it isolates how much the skills
-//   actually move the rubric.
-const SOLVERS = bench.SOLVERS;
+//   actually move the rubric. The seed loop iterates bench.SETUPS directly (each
+//   workspace's per-row wiring — agent type, playwright mode — comes from the setup).
 
 // The cwd preamble run_task_local.sh prepends to the base prompt. prompt.txt is
 // what the verifier reads as "the task"; the run-environment note lives only in
@@ -75,8 +80,8 @@ function rmrf(p) {
 // Skip build output and VCS/dependency noise when copying the skeleton.
 const SKELETON_EXCLUDE = new Set(['target', '.git', 'node_modules']);
 
-function seedWorkspace(agent, port) {
-  const ws = path.join(HERE, bench.workspaceRel(PROBLEM, agent)); // workspaces/<problem>/<agent>
+function seedWorkspace(setup, port) {
+  const ws = path.join(HERE, bench.workspaceRel(PROBLEM, setup.label)); // workspaces/<problem>/<label>
   rmrf(ws);
   fs.mkdirSync(ws, { recursive: true });
 
@@ -118,9 +123,13 @@ function seedWorkspace(agent, port) {
   );
 
   // Codex has no plugin loader, so the agent-skills plugin can't deliver the
-  // Vaadin skills the way it does for the Claude row. Install them into Codex's
-  // own discovery location instead, for an apples-to-apples comparison.
-  if (agent === 'codex') seedCodexSkills(ws);
+  // Vaadin skills (nor the playwright-cli skill) the way it does for the Claude
+  // rows. Install them into Codex's own discovery location instead, for an
+  // apples-to-apples comparison. The playwright-cli skill is added only for the
+  // Playwright CLI rows (`playwright: 'cli'`) — the MCP rows get the Playwright MCP.
+  if (setup.agent === 'codex') {
+    seedCodexSkills(ws, { playwrightCli: setup.playwright === 'cli' });
+  }
 }
 
 // Point the Codex workspace's `.agents/skills/` at agent-skills' skills/ via a
@@ -134,7 +143,13 @@ function seedWorkspace(agent, port) {
 //   reported path resolves outside `.agents/`, which would under-count
 //   skill_calls — the skills still load and work, only the metric is affected.
 //   Switch back to `fs.cpSync(SKILLS_DIR, dest, { recursive: true })` if so.
-function seedCodexSkills(ws) {
+//
+// When `playwrightCli` is set (the Playwright CLI rows) the playwright-cli skill must
+// sit ALONGSIDE the Vaadin skills under `.agents/skills/`. A whole-dir symlink leaves
+// no room for a sibling, so in that case `.agents/skills` is a real directory holding
+// one per-skill symlink each (same `.agents/skills/<name>/SKILL.md` prefix, so the
+// skill_calls caveat above is unchanged). The MCP rows keep the proven whole-dir symlink.
+function seedCodexSkills(ws, { playwrightCli = false } = {}) {
   if (!fs.existsSync(SKILLS_DIR)) {
     console.error(
       `[seed] agent-skills skills/ not found at ${SKILLS_DIR} — ` +
@@ -145,7 +160,27 @@ function seedCodexSkills(ws) {
   const dest = path.join(ws, '.agents', 'skills');
   fs.mkdirSync(path.dirname(dest), { recursive: true }); // the `.agents` parent
   rmrf(dest); // workspace is fresh, but stay idempotent
-  fs.symlinkSync(SKILLS_DIR, dest, 'dir'); // SKILLS_DIR is absolute
+
+  if (!playwrightCli) {
+    fs.symlinkSync(SKILLS_DIR, dest, 'dir'); // SKILLS_DIR is absolute — whole-dir symlink
+    return;
+  }
+
+  // Per-skill symlinks so playwright-cli can be a sibling of the Vaadin skills.
+  fs.mkdirSync(dest, { recursive: true });
+  for (const name of fs.readdirSync(SKILLS_DIR)) {
+    if (fs.existsSync(path.join(SKILLS_DIR, name, 'SKILL.md'))) {
+      fs.symlinkSync(path.join(SKILLS_DIR, name), path.join(dest, name), 'dir');
+    }
+  }
+  if (fs.existsSync(PLAYWRIGHT_CLI_SKILL_DIR)) {
+    fs.symlinkSync(PLAYWRIGHT_CLI_SKILL_DIR, path.join(dest, 'playwright-cli'), 'dir');
+  } else {
+    console.error(
+      `[seed] playwright-cli skill not found at ${PLAYWRIGHT_CLI_SKILL_DIR} — ` +
+        `Codex CLI row will solve WITHOUT the playwright-cli skill`,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -265,10 +300,13 @@ module.exports.seed = async function seed(hookName /* , context */) {
     }
   }
 
-  for (const agent of SOLVERS) {
-    const port = bench.portFor(PROBLEM, agent);
-    seedWorkspace(agent, port);
-    console.error(`[seed] ${PROBLEM}/${agent}: workspace ready on port ${port}`);
+  for (const setup of bench.SETUPS) {
+    const port = bench.portFor(PROBLEM, setup.label); // portFor keys on the label
+    seedWorkspace(setup, port);
+    console.error(
+      `[seed] ${PROBLEM}/${setup.label}: workspace ready on port ${port} ` +
+        `(agent=${setup.agent}, playwright=${setup.playwright})`,
+    );
   }
 
   await writeManifest();

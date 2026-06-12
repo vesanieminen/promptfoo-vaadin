@@ -1,0 +1,12 @@
+{
+    "name": "playwright-cli-skill",
+    "skills": [
+        "./skills/playwright-cli"
+    ],
+    "description": "Teaches the agent to drive a browser through the `playwright-cli` command (snapshot/click/fill/...) instead of the Playwright MCP — the CLI+SKILL alternative the Playwright MCP README recommends for token-efficient coding agents.",
+    "author": {
+        "name": "Microsoft (Playwright) — vendored",
+        "url": "https://github.com/microsoft/playwright-mcp"
+    },
+    "keywords": ["playwright", "browser", "cli", "e2e", "automation"]
+}
