@@ -99,11 +99,17 @@
   .trend-legend .ln.codex{height:0;border-top:3px dotted #d97706;width:22px}
   .trend-note{color:#9aa7b5;font-size:12px;margin:10px 0 0;line-height:1.5}
   .trend-note .sw{display:inline-block;width:11px;height:11px;border-radius:3px;background:#fdf3e6;border:1px solid #f0dcbd;vertical-align:-1px;margin:0 2px}
-  svg.trend .hit{fill:transparent;cursor:pointer}
-  .chart-tip{position:fixed;z-index:300;pointer-events:none;display:none;background:#16202e;color:#fff;border-radius:11px;padding:11px 14px;box-shadow:0 12px 36px rgba(0,0,0,.32);max-width:264px;font:13px/1.5 -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
-  .chart-tip .t-top{font:800 13.5px/1 ui-monospace,monospace}
-  .chart-tip .t-val{font-size:22px;font-weight:800;letter-spacing:-.01em;margin:5px 0 2px}
-  .chart-tip .t-sub{color:#aeb9c6;font-size:12px;line-height:1.45}
+  svg.trend .hitcol{fill:transparent;cursor:pointer}
+  svg.trend #guide{pointer-events:none}
+  .chart-tip{position:fixed;z-index:300;pointer-events:none;display:none;background:#16202e;color:#fff;border-radius:11px;padding:12px 13px;box-shadow:0 12px 36px rgba(0,0,0,.32);min-width:232px;font:13px/1.5 -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+  .chart-tip .t-run{font:800 13.5px/1 ui-monospace,monospace}
+  .chart-tip .t-reg{color:#aeb9c6;font-size:11.5px;margin:3px 0 9px}
+  .chart-tip .ttrow{display:grid;grid-template-columns:74px 1fr;gap:9px;align-items:center;margin:5px 0}
+  .chart-tip .ttname{font:700 11px/1 ui-monospace,monospace;text-align:right;color:#cdd6e0;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;justify-content:flex-end}
+  .chart-tip .ttname .tdot{width:8px;height:8px;border-radius:50%;flex:none}
+  .chart-tip .ttbar{height:20px;border-radius:6px;display:flex;align-items:center;gap:5px;padding:0 8px;color:#fff;font:800 11px/1 ui-monospace,monospace;letter-spacing:.02em;white-space:nowrap}
+  .chart-tip .ttbar .tstar{font-size:10px}
+  .chart-tip .ttbar .ttco{margin-left:auto;font-weight:600;opacity:.92}
 
   /* per-card rubric scoreboard — value lives INSIDE the colored bar */
   .scores{margin:13px 0 2px;display:flex;flex-direction:column;gap:8px}
@@ -181,7 +187,7 @@ result screenshots. Newest first; 5 reports on file.</p>
     <g fill="#d97706"><circle cx="56" cy="70.4" r="9.9"><title>06-10 · codex 97.9% · $42.60 total</title></circle></g>
     <text class="ptlbl" x="104" y="62" fill="#d97706" text-anchor="start">97.9% &middot; codex top score</text>
     <!-- transparent hover targets (on top) carrying per-point detail -->
-    <g class="hits"><circle class="hit" cx="56" cy="204.8" r="15" data-agent="claude-no-skills" data-run="06-10" data-val="92.3" data-cost="$23.02" data-color="#db2777" data-note="Claude self-graded · subscription"></circle><circle class="hit" cx="266" cy="202.4" r="15" data-agent="claude-no-skills" data-run="06-11 a" data-val="92.4" data-cost="$22.19" data-color="#db2777" data-note="Claude self-graded · subscription"></circle><circle class="hit" cx="476" cy="245.6" r="15" data-agent="claude-no-skills" data-run="06-11 b" data-val="90.6" data-cost="$22.39" data-color="#db2777" data-note="Codex-graded (cross-grade) · subscription"></circle><circle class="hit" cx="686" cy="178.4" r="15" data-agent="claude-no-skills" data-run="06-11 c" data-val="93.4" data-cost="$24.12" data-color="#db2777" data-note="Claude self-graded · subscription"></circle><circle class="hit" cx="896" cy="238.4" r="15" data-agent="claude-no-skills" data-run="06-12" data-val="90.9" data-cost="$29.06" data-color="#db2777" data-note="Codex-graded · API key · effort=medium"></circle><circle class="hit" cx="266" cy="137.6" r="15" data-agent="claude-local-mcp" data-run="06-11 a" data-val="95.1" data-cost="$19.88" data-color="#2563eb" data-note="Claude self-graded · subscription"></circle><circle class="hit" cx="476" cy="154.4" r="15" data-agent="claude-local-mcp" data-run="06-11 b" data-val="94.4" data-cost="$27.46" data-color="#2563eb" data-note="Codex-graded (cross-grade) · subscription"></circle><circle class="hit" cx="686" cy="202.4" r="15" data-agent="claude-local-mcp" data-run="06-11 c" data-val="92.4" data-cost="$25.32" data-color="#2563eb" data-note="Claude self-graded · subscription"></circle><circle class="hit" cx="896" cy="248" r="15" data-agent="claude-local-mcp" data-run="06-12" data-val="90.5" data-cost="$24.77*" data-color="#2563eb" data-note="Codex-graded · API key · effort=medium"></circle><circle class="hit" cx="56" cy="154.4" r="15" data-agent="claude" data-run="06-10" data-val="94.4" data-cost="$25.17" data-color="#0d9488" data-note="Claude self-graded · subscription"></circle><circle class="hit" cx="266" cy="168.8" r="15" data-agent="claude" data-run="06-11 a" data-val="93.8" data-cost="$23.16" data-color="#0d9488" data-note="Claude self-graded · subscription"></circle><circle class="hit" cx="476" cy="236" r="15" data-agent="claude" data-run="06-11 b" data-val="91.0" data-cost="$31.35" data-color="#0d9488" data-note="Codex-graded (cross-grade) · subscription"></circle><circle class="hit" cx="686" cy="185.6" r="15" data-agent="claude" data-run="06-11 c" data-val="93.1" data-cost="$12.36*" data-color="#0d9488" data-note="Claude self-graded · subscription"></circle><circle class="hit" cx="896" cy="252.8" r="15" data-agent="claude" data-run="06-12" data-val="90.3" data-cost="$26.68" data-color="#0d9488" data-note="Codex-graded · API key · effort=medium"></circle><circle class="hit" cx="56" cy="70.4" r="16" data-agent="codex" data-run="06-10" data-val="97.9" data-cost="$42.60" data-color="#d97706" data-note="Claude self-graded · subscription"></circle></g>
+    <line id="guide" x1="0" x2="0" y1="16" y2="312" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" style="display:none"></line><g class="hits"><rect class="hitcol" data-col="0" x="30" y="20" width="131" height="288"></rect><rect class="hitcol" data-col="1" x="161" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="2" x="371" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="3" x="581" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="4" x="791" y="20" width="129" height="288"></rect></g>
   </svg>
   </div>
   <div class="trend-legend">
@@ -197,7 +203,7 @@ result screenshots. Newest first; 5 reports on file.</p>
 <div class="reportgrid">
 <div class="report">
   <div class="rdate">2026-06-12 · 10:46 run</div>
-  <div class="rtitle">agentic-DX bench — 2026-06-12 results (Codex-graded · effort=medium)</div>
+  <div class="rtitle">Dead heat at ~90% — baseline edges it</div>
   <div class="ragents"><span class="chip c-codex"><span class="dot d-codex"></span>verifier: codex · gpt-5.5</span><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
   <div class="scores">
     <div class="srow win"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:90.9%"><span class="star">★</span><span class="sc">90.9%</span><span class="co">$29.06</span></i></span></div>
@@ -210,7 +216,7 @@ result screenshots. Newest first; 5 reports on file.</p>
 </div>
 <div class="report">
   <div class="rdate">2026-06-11 · 18:51 run</div>
-  <div class="rtitle">agentic-DX bench — 2026-06-11 results (run 3 · Claude-graded)</div>
+  <div class="rtitle">Skills don't separate — baseline tops it</div>
   <div class="ragents"><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
   <div class="scores">
     <div class="srow win"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:93.4%"><span class="star">★</span><span class="sc">93.4%</span><span class="co">$24.12</span></i></span></div>
@@ -223,7 +229,7 @@ result screenshots. Newest first; 5 reports on file.</p>
 </div>
 <div class="report">
   <div class="rdate">2026-06-11 · 09:00 run</div>
-  <div class="rtitle">agentic-DX bench — 2026-06-11 results (Codex verifier)</div>
+  <div class="rtitle">First Codex cross-grade — local MCP leads</div>
   <div class="ragents"><span class="chip c-codex"><span class="dot d-codex"></span>verifier: codex · gpt-5.5</span><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
   <div class="scores">
     <div class="srow win"><span class="sname"><span class="dot bg-localmcp"></span>local-mcp</span><span class="sbar"><i class="bg-localmcp" style="width:94.4%"><span class="star">★</span><span class="sc">94.4%</span><span class="co">$27.46</span></i></span></div>
@@ -236,7 +242,7 @@ result screenshots. Newest first; 5 reports on file.</p>
 </div>
 <div class="report">
   <div class="rdate">2026-06-11 · 06:02 run</div>
-  <div class="rtitle">agentic-DX bench — 2026-06-11 results</div>
+  <div class="rtitle">Local docs MCP ≈ hosted MCP</div>
   <div class="ragents"><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
   <div class="scores">
     <div class="srow win"><span class="sname"><span class="dot bg-localmcp"></span>local-mcp</span><span class="sbar"><i class="bg-localmcp" style="width:95.1%"><span class="star">★</span><span class="sc">95.1%</span><span class="co">$19.88</span></i></span></div>
@@ -249,7 +255,7 @@ result screenshots. Newest first; 5 reports on file.</p>
 </div>
 <div class="report">
   <div class="rdate">2026-06-10</div>
-  <div class="rtitle">agentic-DX bench — 2026-06-10 results</div>
+  <div class="rtitle">Codex wins every rubric — at ~2× the cost</div>
   <div class="ragents"><span class="chip c-codex"><span class="dot d-codex"></span>codex · gpt-5.5</span><span class="chip c-claude"><span class="dot d-claude"></span>claude · opus-4-8 + skills</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
   <div class="scores">
     <div class="srow win"><span class="sname"><span class="dot bg-codex"></span>codex</span><span class="sbar"><i class="bg-codex" style="width:97.9%"><span class="star">★</span><span class="sc">97.9%</span><span class="co">$42.60</span></i></span></div>
@@ -283,13 +289,32 @@ result screenshots. Newest first; 5 reports on file.</p>
 <footer>agentic-DX bench · run reports · add a card per run by hand — see <a href="README.md">README.md</a></footer>
 <div id="chartTip" class="chart-tip"></div>
 <script>(function(){
-  var tip=document.getElementById('chartTip');
+  var tip=document.getElementById('chartTip'), guide=document.getElementById('guide');
+  // one entry per run (x-axis value); rows are best-first, mirroring the card scoreboards
+  var T='#0d9488',B='#2563eb',P='#db2777',A='#d97706';
+  var RUNS=[
+    {label:'06-10', cx:56,  note:'Claude self-graded · subscription', rows:[
+      {n:'codex',c:A,s:'97.9%',co:'$42.60',win:1},{n:'claude',c:T,s:'94.4%',co:'$25.17'},{n:'no-skills',c:P,s:'92.3%',co:'$23.02'}]},
+    {label:'06-11 a', cx:266, note:'Claude self-graded · subscription', rows:[
+      {n:'local-mcp',c:B,s:'95.1%',co:'$19.88',win:1},{n:'claude',c:T,s:'93.8%',co:'$23.16'},{n:'no-skills',c:P,s:'92.4%',co:'$22.19'}]},
+    {label:'06-11 b', cx:476, note:'Codex-graded (cross-grade) · subscription', rows:[
+      {n:'local-mcp',c:B,s:'94.4%',co:'$27.46',win:1},{n:'claude',c:T,s:'91.0%',co:'$31.35'},{n:'no-skills',c:P,s:'90.6%',co:'$22.39'}]},
+    {label:'06-11 c', cx:686, note:'Claude self-graded · subscription', rows:[
+      {n:'no-skills',c:P,s:'93.4%',co:'$24.12',win:1},{n:'claude',c:T,s:'93.1%',co:'$12.36*'},{n:'local-mcp',c:B,s:'92.4%',co:'$25.32'}]},
+    {label:'06-12', cx:896, note:'Codex-graded · API key · effort=medium', rows:[
+      {n:'no-skills',c:P,s:'90.9%',co:'$29.06',win:1},{n:'local-mcp',c:B,s:'90.5%',co:'$24.77*'},{n:'claude',c:T,s:'90.3%',co:'$26.68'}]}
+  ];
+  function rowHTML(x){
+    return '<div class="ttrow"><span class="ttname"><i class="tdot" style="background:'+x.c+'"></i>'+x.n+'</span>'
+      +'<span class="ttbar" style="background:'+x.c+'">'+(x.win?'<span class="tstar">★</span>':'')
+      +'<span class="ttsc">'+x.s+'</span><span class="ttco">'+x.co+'</span></span></div>';
+  }
   function show(e){
-    var d=e.currentTarget.dataset;
-    tip.innerHTML='<div class="t-top" style="color:'+d.color+'">'+d.agent+'</div>'
-      +'<div class="t-val">'+d.val+'%</div>'
-      +'<div class="t-sub"><b style="color:#dfe6ee">'+d.run+'</b> run · mean rubric over the 3 problems<br>total cost <b style="color:#dfe6ee">'+d.cost+'</b> (solve+verify)<br>'+d.note+'</div>';
-    tip.style.display='block'; move(e);
+    var r=RUNS[+e.currentTarget.dataset.col];
+    tip.innerHTML='<div class="t-run">'+r.label+' run</div><div class="t-reg">'+r.note+'</div>'+r.rows.map(rowHTML).join('');
+    tip.style.display='block';
+    guide.setAttribute('x1',r.cx); guide.setAttribute('x2',r.cx); guide.style.display='';
+    move(e);
   }
   function move(e){
     var x=e.clientX+16,y=e.clientY+16,w=tip.offsetWidth,h=tip.offsetHeight;
@@ -297,10 +322,10 @@ result screenshots. Newest first; 5 reports on file.</p>
     if(y+h>window.innerHeight-8)y=e.clientY-h-16;
     tip.style.left=x+'px';tip.style.top=y+'px';
   }
-  document.querySelectorAll('svg.trend .hit').forEach(function(h){
-    h.addEventListener('mouseenter',show);
-    h.addEventListener('mousemove',move);
-    h.addEventListener('mouseleave',function(){tip.style.display='none';});
+  document.querySelectorAll('svg.trend .hitcol').forEach(function(z){
+    z.addEventListener('mouseenter',show);
+    z.addEventListener('mousemove',move);
+    z.addEventListener('mouseleave',function(){tip.style.display='none';guide.style.display='none';});
   });
 })();</script>
 </body></html>
