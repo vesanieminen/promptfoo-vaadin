@@ -54,6 +54,13 @@ const PLAYWRIGHT_CLI_PLUGIN = path.join(__dirname, 'playwright-cli-plugin');
 // skill so the agent drives the browser via the `playwright-cli` command (Bash).
 const usesPlaywrightCli = (key) => key === 'cli';
 
+// Benchmark integrity: `playwright-cli` is globally installed (on PATH), so an MCP row
+// will `which playwright-cli` and drive the browser with the CLI instead of the
+// Playwright MCP it's meant to measure — observed 2026-06-12: the MCP `claude` row made
+// 17 CLI / 0 mcp__playwright calls on 2 of 3 problems, collapsing the A/B. The fix is the
+// disallowed_tools deny below (DENY_PLAYWRIGHT_CLI), applied to the MCP rows only.
+const DENY_PLAYWRIGHT_CLI = ['Bash(playwright-cli:*)', 'Bash(playwright-cli)'];
+
 // Playwright (chromium) as an in-memory (`--isolated`) browser, so the concurrent
 // solver rows don't deadlock on a shared profile lock. Registered per provider — but
 // ONLY for `playwright: 'mcp'` rows (the 'cli' rows use the playwright-cli command).
@@ -133,6 +140,15 @@ function claudeSolver({ label, skills, vaadinMcp, playwright }) {
     setting_sources: [], // ignore the user's personal settings/plugins → clean benchmark
     mcp: { servers },
   };
+  // Stop the MCP rows from reaching for the globally-installed `playwright-cli` (which
+  // would bypass the Playwright MCP they're measuring). The provider forwards
+  // config.disallowed_tools → SDK disallowedTools, enforced even under bypassPermissions;
+  // it removes the matching Bash invocations from the model's context, and Claude Code
+  // decomposes compound commands so `cd … && playwright-cli …` is denied too
+  // (probe-verified 2026-06-12). The CLI rows are NOT denied — their browser path IS the
+  // CLI. Note: this matches command strings, so a deliberate `npx playwright-cli` or
+  // `bash -c '…'` would slip through — a theoretical gap the agent hasn't exercised.
+  if (!cli) config.disallowed_tools = DENY_PLAYWRIGHT_CLI;
   // Plugins, as ABSOLUTE paths so they resolve from any config location (worktree
   // included): the Vaadin agent-skills plugin (from AGENTIC_DX_DIR) when `skills`, and
   // the bundled playwright-cli skill plugin when this is a Playwright CLI row. With
