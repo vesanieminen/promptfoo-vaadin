@@ -160,13 +160,13 @@ result screenshots. Newest first; 5 reports on file.</p>
       <line x1="56" y1="308" x2="900" y2="308"></line>
     </g>
     <g class="axis-lbl" text-anchor="end">
-      <text x="48" y="24">100%</text>
-      <text x="48" y="72">98</text>
-      <text x="48" y="120">96</text>
-      <text x="48" y="168">94</text>
-      <text x="48" y="216">92</text>
-      <text x="48" y="264">90</text>
-      <text x="48" y="312">88</text>
+      <text x="42" y="24">100%</text>
+      <text x="42" y="72">98</text>
+      <text x="42" y="120">96</text>
+      <text x="42" y="168">94</text>
+      <text x="42" y="216">92</text>
+      <text x="42" y="264">90</text>
+      <text x="42" y="312">88</text>
     </g>
     <!-- x labels -->
     <g class="xlbl">
@@ -187,7 +187,6 @@ result screenshots. Newest first; 5 reports on file.</p>
     <g fill="#0d9488"><circle cx="56" cy="154.4" r="6.0"><title>06-10 · claude 94.4% · $25.17 total</title></circle><circle cx="266" cy="168.8" r="5.5"><title>06-11 a · claude 93.8% · $23.16 total</title></circle><circle cx="476" cy="236" r="7.4"><title>06-11 b · claude 91.0% · $31.35 total</title></circle><circle cx="686" cy="185.6" r="3.1"><title>06-11 c · claude 93.1% · $12.36* total</title></circle><circle cx="896" cy="252.8" r="6.3"><title>06-12 · claude 90.3% · $26.68 total</title></circle></g>
     <!-- codex (amber), run 1 only -->
     <g fill="#d97706"><circle cx="56" cy="70.4" r="9.9"><title>06-10 · codex 97.9% · $42.60 total</title></circle></g>
-    <text class="ptlbl" x="104" y="62" fill="#d97706" text-anchor="start">97.9% &middot; codex top score</text>
     <!-- transparent hover targets (on top) carrying per-point detail -->
     <line id="guide" x1="0" x2="0" y1="16" y2="312" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" style="display:none"></line><g class="hits"><rect class="hitcol" data-col="0" x="30" y="20" width="131" height="288"></rect><rect class="hitcol" data-col="1" x="161" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="2" x="371" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="3" x="581" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="4" x="791" y="20" width="129" height="288"></rect></g>
   </svg>
@@ -225,7 +224,7 @@ result screenshots. Newest first; 5 reports on file.</p>
     <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:93.1%"><span class="sc">93.1%</span><span class="co">$12.36*</span></i></span></div>
     <div class="srow"><span class="sname"><span class="dot bg-localmcp"></span>local-mcp</span><span class="sbar"><i class="bg-localmcp" style="width:92.4%"><span class="sc">92.4%</span><span class="co">$25.32</span></i></span></div>
   </div>
-  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: xhigh</span><span class="gtag sub">Subscription</span></div>
+  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
   <div class="rlede">A third sweep of the same three Claude variants, this time Claude-graded (self-grading; no Codex). The skills edge doesn&#x27;t reproduce: the no-skills baseline posts the top mean (93.4%) and wins basic_layout while the skill variants take basic_form, all three within a point. basic_form near-perfect; the 480px narrow-viewport bug recurs a third time; all three leak idiom points (plain Div over HorizontalLayout, FormLayout over Composite). The SDK hang was rampant — claude hung on all three solves ($0 solve cost recorded) and one verifier row was re-graded.</div>
   <div class="rlinks"><a class="btn" href="bench-results-2026-06-11-run3.html">Open report →</a></div>
 </div>
@@ -238,7 +237,7 @@ result screenshots. Newest first; 5 reports on file.</p>
     <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:91.0%"><span class="sc">91.0%</span><span class="co">$31.35</span></i></span></div>
     <div class="srow"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:90.6%"><span class="sc">90.6%</span><span class="co">$22.39</span></i></span></div>
   </div>
-  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag codex">Codex-graded</span><span class="gtag eff">effort: xhigh</span><span class="gtag sub">Subscription</span></div>
+  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag codex">Codex-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
   <div class="rlede">First sweep to run the new selectable phase-2 verifier as <b>Codex (gpt-5.5)</b>, so the three Claude variants are cross-graded instead of self-graded. All clear the 60% floor (mean: local-mcp 94.7% · claude 91.0% · no-skills 90.7%); basic_form is near-perfect, the 480px narrow-viewport bug recurs on basic_layout, two solve rows hung but graded fine, and Codex verification (~$50) outcosts solving (~$31). The Codex solver produced no rows.</div>
   <div class="rlinks"><a class="btn" href="bench-results-2026-06-11-run2.html">Open report →</a></div>
 </div>
@@ -251,7 +250,7 @@ result screenshots. Newest first; 5 reports on file.</p>
     <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:93.8%"><span class="sc">93.8%</span><span class="co">$23.16</span></i></span></div>
     <div class="srow"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:92.4%"><span class="sc">92.4%</span><span class="co">$22.19</span></i></span></div>
   </div>
-  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: xhigh</span><span class="gtag sub">Subscription</span></div>
+  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
   <div class="rlede">Today&#x27;s sweep drops Codex and pits three Claude Opus 4.8 variants against the same three Vaadin tasks: skills + hosted docs MCP, skills + local docs MCP, and the no-skills baseline. Same two-phase solve→verify pipeline. The question: does the local MCP change the answer?</div>
   <div class="rlinks"><a class="btn" href="bench-results-2026-06-11.html">Open report →</a></div>
 </div>
@@ -264,7 +263,7 @@ result screenshots. Newest first; 5 reports on file.</p>
     <div class="srow"><span class="sname"><span class="dot bg-claude"></span>claude</span><span class="sbar"><i class="bg-claude" style="width:94.4%"><span class="sc">94.4%</span><span class="co">$25.17</span></i></span></div>
     <div class="srow"><span class="sname"><span class="dot bg-noskills"></span>no-skills</span><span class="sbar"><i class="bg-noskills" style="width:92.3%"><span class="sc">92.3%</span><span class="co">$23.02</span></i></span></div>
   </div>
-  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: xhigh</span><span class="gtag sub">Subscription</span></div>
+  <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: default</span><span class="gtag sub">Subscription</span></div>
   <div class="rlede">Codex, Claude (with Vaadin skills), and a no-skills Claude baseline each solve three Vaadin Flow tasks; a Claude+Playwright verifier then runs every app and grades it against its rubric. Every row passed — the signal is in the deductions and the cost spread.</div>
   <div class="rlinks"><a class="btn" href="bench-results-2026-06-10.html">Open report →</a></div>
 </div>
@@ -295,13 +294,13 @@ result screenshots. Newest first; 5 reports on file.</p>
   // one entry per run (x-axis value); rows are best-first, mirroring the card scoreboards
   var T='#0d9488',B='#2563eb',P='#db2777',A='#d97706';
   var RUNS=[
-    {label:'06-10', cx:56,  note:'Claude self-graded · subscription · effort xhigh', rows:[
+    {label:'06-10', cx:56,  note:'Claude self-graded · subscription · effort default', rows:[
       {n:'codex',c:A,s:'97.9%',co:'$42.60',win:1},{n:'claude',c:T,s:'94.4%',co:'$25.17'},{n:'no-skills',c:P,s:'92.3%',co:'$23.02'}]},
-    {label:'06-11 a', cx:266, note:'Claude self-graded · subscription · effort xhigh', rows:[
+    {label:'06-11 a', cx:266, note:'Claude self-graded · subscription · effort default', rows:[
       {n:'local-mcp',c:B,s:'95.1%',co:'$19.88',win:1},{n:'claude',c:T,s:'93.8%',co:'$23.16'},{n:'no-skills',c:P,s:'92.4%',co:'$22.19'}]},
-    {label:'06-11 b', cx:476, note:'Codex-graded (cross-grade) · subscription · effort xhigh', rows:[
+    {label:'06-11 b', cx:476, note:'Codex-graded (cross-grade) · subscription · effort default', rows:[
       {n:'local-mcp',c:B,s:'94.4%',co:'$27.46',win:1},{n:'claude',c:T,s:'91.0%',co:'$31.35'},{n:'no-skills',c:P,s:'90.6%',co:'$22.39'}]},
-    {label:'06-11 c', cx:686, note:'Claude self-graded · subscription · effort xhigh', rows:[
+    {label:'06-11 c', cx:686, note:'Claude self-graded · subscription · effort default', rows:[
       {n:'no-skills',c:P,s:'93.4%',co:'$24.12',win:1},{n:'claude',c:T,s:'93.1%',co:'$12.36*'},{n:'local-mcp',c:B,s:'92.4%',co:'$25.32'}]},
     {label:'06-12', cx:896, note:'Codex-graded · API key · effort=medium', rows:[
       {n:'no-skills',c:P,s:'90.9%',co:'$29.06',win:1},{n:'local-mcp',c:B,s:'90.5%',co:'$24.77*'},{n:'claude',c:T,s:'90.3%',co:'$26.68'}]}
