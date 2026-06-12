@@ -1,0 +1,109 @@
+{
+  "eval_id": "eval-Q5b-2026-06-11T06:02:17",
+  "references": [
+    {
+      "id": "fcaba7fe-1252-4aee-9247-02dc04b41b6c",
+      "blob_hash": "42509f0fcbfb71e373e76bd1487a7400b9e00242f84704ec9d90ec1c90b9c482",
+      "eval_id": "eval-Q5b-2026-06-11T06:02:17",
+      "test_idx": 0,
+      "prompt_idx": 0,
+      "location": "response.images[0].data",
+      "kind": "image",
+      "created_at": "2026-06-11 06:39:18"
+    },
+    {
+      "id": "bbfa917a-7fa8-4258-a170-86cd374f9f0e",
+      "blob_hash": "d25445bbd7f2057e29cb5a23f0eaeb19b38e63314bedb369a3c2583bbd309d48",
+      "eval_id": "eval-Q5b-2026-06-11T06:02:17",
+      "test_idx": 0,
+      "prompt_idx": 0,
+      "location": "response.images[1].data",
+      "kind": "image",
+      "created_at": "2026-06-11 06:39:18"
+    },
+    {
+      "id": "df7450ed-20a8-4b9b-9693-af0b3fab21be",
+      "blob_hash": "ccd95e30746884a844670fbfb92e9d396d44c0d3f3120d215d8a5cf9a1d25f6c",
+      "eval_id": "eval-Q5b-2026-06-11T06:02:17",
+      "test_idx": 0,
+      "prompt_idx": 2,
+      "location": "response.images[0].data",
+      "kind": "image",
+      "created_at": "2026-06-11 06:39:18"
+    },
+    {
+      "id": "d846a40f-015f-4579-b629-0c85fa60228a",
+      "blob_hash": "259a63745e674dd850f7c21f1d586d7bec2af6e0d1afbb2dcb8054ba32c9df5d",
+      "eval_id": "eval-Q5b-2026-06-11T06:02:17",
+      "test_idx": 0,
+      "prompt_idx": 2,
+      "location": "response.images[1].data",
+      "kind": "image",
+      "created_at": "2026-06-11 06:39:18"
+    },
+    {
+      "id": "c448b627-8827-439e-8361-b8efe7ab50c4",
+      "blob_hash": "77c2a7b0dcb3ffe9bb8baf2d9f015654565fa183857f167023fd2cf7e3b2c89b",
+      "eval_id": "eval-Q5b-2026-06-11T06:02:17",
+      "test_idx": 0,
+      "prompt_idx": 2,
+      "location": "response.images[2].data",
+      "kind": "image",
+      "created_at": "2026-06-11 06:39:18"
+    },
+    {
+      "id": "a0e28115-db59-45d9-b81b-629b04d2f829",
+      "blob_hash": "2371e058a657ecee1d33a480d9f80ac237a9db5fa46ee054e481a4174d5f8e4e",
+      "eval_id": "eval-Q5b-2026-06-11T06:02:17",
+      "test_idx": 0,
+      "prompt_idx": 2,
+      "location": "response.images[3].data",
+      "kind": "image",
+      "created_at": "2026-06-11 06:39:18"
+    }
+  ],
+  "assets": [
+    {
+      "hash": "42509f0fcbfb71e373e76bd1487a7400b9e00242f84704ec9d90ec1c90b9c482",
+      "size_bytes": 86686,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 06:39:18"
+    },
+    {
+      "hash": "d25445bbd7f2057e29cb5a23f0eaeb19b38e63314bedb369a3c2583bbd309d48",
+      "size_bytes": 45706,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 06:39:18"
+    },
+    {
+      "hash": "ccd95e30746884a844670fbfb92e9d396d44c0d3f3120d215d8a5cf9a1d25f6c",
+      "size_bytes": 84957,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 06:39:18"
+    },
+    {
+      "hash": "259a63745e674dd850f7c21f1d586d7bec2af6e0d1afbb2dcb8054ba32c9df5d",
+      "size_bytes": 46291,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 06:39:18"
+    },
+    {
+      "hash": "77c2a7b0dcb3ffe9bb8baf2d9f015654565fa183857f167023fd2cf7e3b2c89b",
+      "size_bytes": 46116,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 06:39:18"
+    },
+    {
+      "hash": "2371e058a657ecee1d33a480d9f80ac237a9db5fa46ee054e481a4174d5f8e4e",
+      "size_bytes": 86129,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 06:39:18"
+    }
+  ]
+}

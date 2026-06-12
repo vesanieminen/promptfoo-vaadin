@@ -1,0 +1,41 @@
+{
+  "eval_id": "eval-oVM-2026-06-11T18:51:34",
+  "references": [
+    {
+      "id": "0bc37efa-bdfa-471d-a0be-ddf1286b8680",
+      "blob_hash": "8fd14a44c853918cd14c5cf6e7d0a3a12fbbe5f831e86c0f4d0ded134aacd764",
+      "eval_id": "eval-oVM-2026-06-11T18:51:34",
+      "test_idx": 0,
+      "prompt_idx": 2,
+      "location": "response.images[0].data",
+      "kind": "image",
+      "created_at": "2026-06-11 19:36:36"
+    },
+    {
+      "id": "19380fbe-1374-438f-a34b-d866158be1d6",
+      "blob_hash": "0181c9ce435b3e3ba35bb0267f6bf17b644e613d611bd0f14f84d0d9714e20d8",
+      "eval_id": "eval-oVM-2026-06-11T18:51:34",
+      "test_idx": 0,
+      "prompt_idx": 2,
+      "location": "response.images[1].data",
+      "kind": "image",
+      "created_at": "2026-06-11 19:36:36"
+    }
+  ],
+  "assets": [
+    {
+      "hash": "8fd14a44c853918cd14c5cf6e7d0a3a12fbbe5f831e86c0f4d0ded134aacd764",
+      "size_bytes": 82179,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 19:36:36"
+    },
+    {
+      "hash": "0181c9ce435b3e3ba35bb0267f6bf17b644e613d611bd0f14f84d0d9714e20d8",
+      "size_bytes": 43505,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 19:36:36"
+    }
+  ]
+}

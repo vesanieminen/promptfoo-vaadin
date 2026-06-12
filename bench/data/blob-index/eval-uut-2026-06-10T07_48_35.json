@@ -1,0 +1,126 @@
+{
+  "eval_id": "eval-uut-2026-06-10T07:48:35",
+  "references": [
+    {
+      "id": "894ce201-1936-47c2-8801-47faa1eaad3b",
+      "blob_hash": "1a0f8e78f3c6cd85cbbfec79c249c06b4d8c4a19539935899f0edded850eacac",
+      "eval_id": "eval-uut-2026-06-10T07:48:35",
+      "test_idx": 0,
+      "prompt_idx": 0,
+      "location": "response.images[0].data",
+      "kind": "image",
+      "created_at": "2026-06-10 11:20:48"
+    },
+    {
+      "id": "517eb9c7-b82a-49e0-8684-f530619e967a",
+      "blob_hash": "5f6f274e24a8924dfdbe06c56b299e916e2bb4a5e0c2fba74aec36720932b3dd",
+      "eval_id": "eval-uut-2026-06-10T07:48:35",
+      "test_idx": 0,
+      "prompt_idx": 0,
+      "location": "response.images[1].data",
+      "kind": "image",
+      "created_at": "2026-06-10 11:20:48"
+    },
+    {
+      "id": "cce9adb8-5362-48fe-bbeb-0483e5360150",
+      "blob_hash": "692871301020960763fb07dbc542345981d849aa69a4d4f29af2849f6e8a0402",
+      "eval_id": "eval-uut-2026-06-10T07:48:35",
+      "test_idx": 0,
+      "prompt_idx": 1,
+      "location": "response.images[0].data",
+      "kind": "image",
+      "created_at": "2026-06-10 11:20:48"
+    },
+    {
+      "id": "0c94332a-4903-43a0-a638-2fe78f8331b9",
+      "blob_hash": "3e717c942de902e3f399a32680b9b4174caf0af2ae65f6a7524dd5131fd289d1",
+      "eval_id": "eval-uut-2026-06-10T07:48:35",
+      "test_idx": 0,
+      "prompt_idx": 1,
+      "location": "response.images[1].data",
+      "kind": "image",
+      "created_at": "2026-06-10 11:20:48"
+    },
+    {
+      "id": "4968bc81-656a-4ea3-a30a-ef28b08e9d66",
+      "blob_hash": "de77383a02c20ba5d8bc341a5bd45e007777253b5f356b329ab9fe71a97cba38",
+      "eval_id": "eval-uut-2026-06-10T07:48:35",
+      "test_idx": 0,
+      "prompt_idx": 1,
+      "location": "response.images[2].data",
+      "kind": "image",
+      "created_at": "2026-06-10 11:20:48"
+    },
+    {
+      "id": "e7bc2113-2bd8-4d39-aa00-af29689a3995",
+      "blob_hash": "76ac8e03d311a988183e28229c84631cf2db8f16b376ef350b7fc315891c22f9",
+      "eval_id": "eval-uut-2026-06-10T07:48:35",
+      "test_idx": 0,
+      "prompt_idx": 2,
+      "location": "response.images[0].data",
+      "kind": "image",
+      "created_at": "2026-06-10 11:20:48"
+    },
+    {
+      "id": "4a4bd378-dc8d-42f9-9a2c-135c6702fe4c",
+      "blob_hash": "af252344d615dbdd777f3552f8bc57c079bf703c56c1402cb743e693bf82712a",
+      "eval_id": "eval-uut-2026-06-10T07:48:35",
+      "test_idx": 0,
+      "prompt_idx": 2,
+      "location": "response.images[1].data",
+      "kind": "image",
+      "created_at": "2026-06-10 11:20:48"
+    }
+  ],
+  "assets": [
+    {
+      "hash": "1a0f8e78f3c6cd85cbbfec79c249c06b4d8c4a19539935899f0edded850eacac",
+      "size_bytes": 88545,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-10 10:55:09"
+    },
+    {
+      "hash": "5f6f274e24a8924dfdbe06c56b299e916e2bb4a5e0c2fba74aec36720932b3dd",
+      "size_bytes": 251858,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-10 10:55:09"
+    },
+    {
+      "hash": "692871301020960763fb07dbc542345981d849aa69a4d4f29af2849f6e8a0402",
+      "size_bytes": 71330,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-10 10:55:09"
+    },
+    {
+      "hash": "3e717c942de902e3f399a32680b9b4174caf0af2ae65f6a7524dd5131fd289d1",
+      "size_bytes": 212755,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-10 10:55:09"
+    },
+    {
+      "hash": "de77383a02c20ba5d8bc341a5bd45e007777253b5f356b329ab9fe71a97cba38",
+      "size_bytes": 283386,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-10 10:55:09"
+    },
+    {
+      "hash": "76ac8e03d311a988183e28229c84631cf2db8f16b376ef350b7fc315891c22f9",
+      "size_bytes": 333367,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-10 10:55:09"
+    },
+    {
+      "hash": "af252344d615dbdd777f3552f8bc57c079bf703c56c1402cb743e693bf82712a",
+      "size_bytes": 473842,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-10 10:55:09"
+    }
+  ]
+}
