@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agentic-DX bench — 2026-06-11 results (run 3 · Claude-graded)</title>
+<style>
+  :root{
+    --ink:#16202e; --muted:#5b6b7e; --line:#e3e8ef; --bg:#f6f8fb; --card:#fff;
+    --indigo:#4f46e5; --blue:#2563eb; --violet:#7c3aed;
+    --claude:#0d9488; --localmcp:#7c3aed; --noskills:#64748b;
+    --claude-bg:#e6f5f3; --localmcp-bg:#f1ecfd; --noskills-bg:#eef1f5;
+    --green:#16a34a; --red:#dc2626; --amber:#b45309;
+    --shadow:0 1px 2px rgba(16,32,46,.06),0 8px 24px rgba(16,32,46,.06);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  a{color:var(--indigo);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  nav.bar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);
+    backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--line)}
+  nav.bar .inner{max-width:1080px;margin:0 auto;padding:10px 22px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  nav.bar .brand{font-weight:700;margin-right:14px;letter-spacing:-.01em}
+  nav.bar a{color:var(--muted);font-size:13.5px;padding:5px 10px;border-radius:7px}
+  nav.bar a:hover{background:#eef1f6;color:var(--ink);text-decoration:none}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+  header.hero{padding:60px 22px 26px;max-width:1080px;margin:0 auto}
+  header.hero .kicker{font:600 13px/1 ui-monospace,monospace;color:var(--indigo);letter-spacing:.08em;text-transform:uppercase}
+  header.hero h1{font-size:clamp(30px,4.4vw,46px);line-height:1.08;letter-spacing:-.02em;margin:14px 0 8px}
+  header.hero p.lede{font-size:19px;color:var(--muted);max-width:790px;margin:0}
+
+  section{padding:34px 0;border-top:1px solid var(--line)}
+  section:first-of-type{border-top:0}
+  h2{font-size:26px;letter-spacing:-.015em;margin:0 0 6px;display:flex;align-items:center;gap:10px}
+  h2 .num{font:700 14px/26px ui-monospace,monospace;color:#fff;background:var(--indigo);
+    width:26px;height:26px;border-radius:7px;text-align:center;flex:none}
+  h2 + .sub{color:var(--muted);margin:0 0 22px;font-size:16px}
+  h3{font-size:17px;margin:22px 0 8px;letter-spacing:-.01em}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  .pad{padding:20px 22px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.grid3,.grid2{grid-template-columns:1fr}}
+
+  .chip{display:inline-flex;align-items:center;gap:7px;font:600 12.5px/1 ui-monospace,monospace;
+    padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;white-space:nowrap}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .c-claude{color:var(--claude)} .d-claude{background:var(--claude)}
+  .c-localmcp{color:var(--localmcp)} .d-localmcp{background:var(--localmcp)}
+  .c-noskills{color:var(--noskills)} .d-noskills{background:var(--noskills)}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px}
+
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px}
+  .stat .big{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+  .stat .lbl{color:var(--muted);font-size:13.5px;margin-top:4px}
+  .stat .sm{font-size:13px;color:var(--muted);margin-top:8px}
+
+  .chartcard{padding:18px 22px 8px}
+  .chart-title{font-weight:700;font-size:15px;margin:0 0 2px}
+  .chart-sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .row{display:grid;grid-template-columns:128px 1fr;align-items:center;gap:12px;margin:9px 0}
+  .row .name{font:600 13px/1.3 ui-monospace,monospace;text-align:right;color:var(--muted)}
+  .track{position:relative;background:#f0f3f7;border-radius:8px;height:30px;overflow:hidden}
+  .fill{height:100%;border-radius:8px;display:flex;align-items:center;justify-content:flex-end;
+    padding-right:10px;color:#fff;font:700 13px/1 ui-monospace,monospace;min-width:42px;transition:width .6s ease}
+  .fill.claude{background:linear-gradient(90deg,#2bb3a5,var(--claude))}
+  .fill.localmcp{background:linear-gradient(90deg,#9a6cf0,var(--localmcp))}
+  .fill.noskills{background:linear-gradient(90deg,#8a96a6,var(--noskills))}
+  .fill.dead{background:repeating-linear-gradient(45deg,#f0d3d3 0 7px,#f7e3e3 7px 14px);color:var(--red);justify-content:flex-start;padding-left:10px;border:1px dashed #e2a8a8}
+  .floor{position:absolute;top:-4px;bottom:-4px;width:2px;background:repeating-linear-gradient(180deg,var(--red) 0 4px,transparent 4px 8px);z-index:2}
+  .axis{grid-column:2;display:flex;justify-content:space-between;font:11px/1 ui-monospace,monospace;color:#9aa7b5;margin-top:2px}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}
+  th{font:600 12px/1 ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  td.n,th.n{text-align:right;font-family:ui-monospace,monospace}
+  tbody tr:last-child td{border-bottom:0}
+  .best{font-weight:800;color:var(--ink)}
+
+  .ded{border-left:3px solid var(--amber);background:#fffaf0;border-radius:0 10px 10px 0;padding:12px 16px;margin:10px 0}
+  .ded.claude{border-color:var(--claude)} .ded.localmcp{border-color:var(--localmcp)} .ded.noskills{border-color:var(--noskills)}
+  .ded.perfect{border-color:var(--green);background:#f1faf3}
+  .ded .who{font:700 12.5px/1 ui-monospace,monospace;display:inline-flex;align-items:center;gap:6px}
+  .ded .pts{font-weight:800;color:var(--red);margin-left:6px}
+  .ded p{margin:6px 0 0;font-size:14px;color:#3a4656}
+
+  ul.clean{margin:6px 0;padding-left:20px} ul.clean li{margin:7px 0}
+  .note{background:#fff8e6;border:1px solid #f3e3b3;border-radius:12px;padding:14px 18px;font-size:14.5px;color:#5c4a12}
+  .note b{color:#7a5d00}
+  .note.warn{background:#fdecec;border-color:#f3c0c0;color:#7a1f1f} .note.warn b{color:#9a1212}
+  .mini{font-size:13px;color:var(--muted)}
+  footer{padding:30px 22px 60px;max-width:1080px;margin:0 auto;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<nav class="bar"><div class="inner">
+  <span class="brand">agentic-DX bench</span>
+  <a href="#tldr">TL;DR</a>
+  <a href="#rubric">Rubric</a>
+  <a href="#cost">Cost</a>
+  <a href="#layout">basic_layout</a>
+  <a href="#form">basic_form</a>
+  <a href="#spec">md_ui_spec</a>
+  <a href="#obs">Observations</a>
+  <a href="#caveats">Caveats</a>
+  <a href="#shots">Screenshots</a>
+  <span class="pager" style="margin-left:auto;display:flex;gap:4px;align-items:center;padding-left:10px;border-left:1px solid var(--line)"><a href="bench-results-2026-06-11-run2.html" title="Older run — 2026-06-11 · 09:00 (Codex verifier)">← Older</a><span style="padding:5px 10px;font-size:13.5px;color:#aab4c0" aria-disabled="true">Newer →</span><a href="index.html" title="All run reports">All ↑</a></span>
+</div></nav>
+
+<header class="hero">
+  <div class="kicker">benchmark report &middot; 2026-06-11 &middot; 18:51 run</div>
+  <h1>Same three Claude variants, third sweep — skills and baseline finish level</h1>
+  <p class="lede">A re-run of the morning's A/B/C — <b>claude</b> (skills + hosted Vaadin docs MCP),
+  <b>claude-local-mcp</b> (skills + a local MCP), and the <b>claude-no-skills</b> baseline — graded by
+  <b>Claude</b> (self-grading; no Codex this time). The question: was the small skills edge on
+  <code>md_ui_spec</code> real? This sweep says not reliably — the baseline posts the top mean and wins
+  <code>basic_layout</code>, the skill variants take <code>basic_form</code>, and all three finish within one rubric point on the mean.</p>
+  <div class="legend" style="margin-top:22px">
+    <span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span>
+    <span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span>
+    <span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ===================== TL;DR ===================== -->
+<section id="tldr">
+  <h2><span class="num">1</span> TL;DR</h2>
+  <p class="sub">Eval range: <a href="http://localhost:15500/eval/eval-oVM-2026-06-11T18:51:34"><code>eval-oVM</code></a>
+  (18:51) → <a href="http://localhost:15500/eval/eval-0ub-2026-06-11T22:19:03"><code>eval-0ub</code></a>
+  (22:35) on <code>localhost:15500</code> · ~3h40m wall-clock (4 of 6 phases ran to the 45-min row cap on hung rows).</p>
+
+  <div class="grid3" style="margin-bottom:16px">
+    <div class="stat"><div class="big">a dead heat</div><div class="lbl">the headline: skills ≈ baseline</div><div class="sm">means within 1 pt — no-skills 93.4% · claude 93.1% · local-mcp 92.4%</div></div>
+    <div class="stat"><div class="big">$61.80</div><div class="lbl">total cost · Claude-graded, no Codex</div><div class="sm">understated — claude's 3 solve rows hung ($0 recorded)</div></div>
+    <div class="stat"><div class="big">9 / 9</div><div class="lbl">rubric cells cleared the 0.60 floor</div><div class="sm">after re-grading one hung verifier row</div></div>
+  </div>
+
+  <div class="card pad">
+    <ul class="clean">
+      <li><b>The skills edge didn't reproduce.</b> On <code>md_ui_spec</code> — the one problem where skills led the
+        baseline by <b>+2</b> on the morning sweep — the <span class="c-noskills">no-skills</span> baseline <b>tied</b>
+        <span class="c-claude">claude</span> at 46/48 this run, and outright <b>won</b> <code>basic_layout</code> (21 vs 20).
+        All three means land within a single point (no-skills 93.4% · claude 93.1% · local-mcp 92.4%). Vivid evidence that
+        an n = 1 gap of a point or two is noise, not signal.</li>
+      <li><b><code>basic_form</code> near-perfect again.</b> <span class="c-claude">claude</span> and
+        <span class="c-localmcp">local-mcp</span> both scored 31/31; <span class="c-noskills">no-skills</span> took 30/31,
+        losing one point on the date field (the <code>DatePicker</code> shows a <code>dd.mm.yyyy</code> hint but rejects that
+        format — no locale configured, so only <code>m/d/yyyy</code> parses).</li>
+      <li><b>The 480px breakpoint bug is back — third straight sweep, all three solvers.</b> Same root cause: the mobile
+        media query is gated at <code>max-width: 379px</code>, so it never fires at the rubric's <b>480px</b> narrow test
+        (it holds fine at 320/375). This is now a benchmark-level signal, not an agent miss.</li>
+      <li><b>New universal idiom miss on <code>basic_layout</code>.</b> All three built the toolbars and groups from plain
+        <code>com.vaadin.flow.component.html.Div</code> + CSS flexbox instead of <code>HorizontalLayout</code>/<code>VerticalLayout</code>,
+        losing the Vaadin-specific point — and the baseline's two static-check failures were exactly
+        <i>"uses HorizontalLayout"</i> and <i>"uses VerticalLayout"</i>.</li>
+      <li><b>The agent-SDK hang was rampant.</b> <span class="c-claude">claude</span> (hosted MCP) hung on
+        <b>all three</b> solves (the hang writeup had it at 0/2 before), and <span class="c-localmcp">local-mcp</span> hung on
+        <code>basic_layout</code> too — 4 of 9 solve rows reaped at the 45-min cap. Every workspace built and graded normally in
+        phase 2, but <span class="c-claude">claude</span>'s entire phase-1 telemetry (cost + traces) is gone ($0). One
+        <em>verifier</em> row also hung and was re-graded (see caveats).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================== RUBRIC ===================== -->
+<section id="rubric">
+  <h2><span class="num">2</span> Rubric scores</h2>
+  <p class="sub">Phase 2 — normalized fraction of each problem's rubric max. Bars are full 0–100%; the dashed line marks the <code>0.60</code> pass floor.</p>
+
+  <div class="grid3">
+    <div class="card chartcard">
+      <p class="chart-title">basic_layout <span class="mini">· max 24</span></p>
+      <p class="chart-sub">responsive toolbar view</p>
+      <div class="row"><div class="name c-claude">claude</div><div class="track"><div class="floor" style="left:60%"></div><div class="fill claude" style="width:83.3%">20/24</div></div></div>
+      <div class="row"><div class="name c-localmcp">local-mcp</div><div class="track"><div class="floor" style="left:60%"></div><div class="fill localmcp" style="width:83.3%">20/24</div></div></div>
+      <div class="row"><div class="name c-noskills">no-skills</div><div class="track"><div class="floor" style="left:60%"></div><div class="fill noskills" style="width:87.5%">21/24</div></div></div>
+      <div class="axis"><span>0%</span><span>100%</span></div>
+    </div>
+    <div class="card chartcard">
+      <p class="chart-title">basic_form <span class="mini">· max 31</span></p>
+      <p class="chart-sub">responsive onboarding form</p>
+      <div class="row"><div class="name c-claude">claude</div><div class="track"><div class="floor" style="left:60%"></div><div class="fill claude" style="width:100%">31/31</div></div></div>
+      <div class="row"><div class="name c-localmcp">local-mcp</div><div class="track"><div class="floor" style="left:60%"></div><div class="fill localmcp" style="width:100%">31/31</div></div></div>
+      <div class="row"><div class="name c-noskills">no-skills</div><div class="track"><div class="floor" style="left:60%"></div><div class="fill noskills" style="width:96.8%">30/31</div></div></div>
+      <div class="axis"><span>0%</span><span>100%</span></div>
+    </div>
+    <div class="card chartcard">
+      <p class="chart-title">md_ui_spec <span class="mini">· max 48</span></p>
+      <p class="chart-sub">Employees CRUD from a spec</p>
+      <div class="row"><div class="name c-claude">claude</div><div class="track"><div class="floor" style="left:60%"></div><div class="fill claude" style="width:95.8%">46/48</div></div></div>
+      <div class="row"><div class="name c-localmcp">local-mcp</div><div class="track"><div class="floor" style="left:60%"></div><div class="fill localmcp" style="width:93.75%">45/48</div></div></div>
+      <div class="row"><div class="name c-noskills">no-skills</div><div class="track"><div class="floor" style="left:60%"></div><div class="fill noskills" style="width:95.8%">46/48</div></div></div>
+      <div class="axis"><span>0%</span><span>100%</span></div>
+    </div>
+  </div>
+
+  <div class="note warn" style="margin-top:18px">⚠️ <b>Self-grading is total this run.</b> With no Codex, every solver <em>and</em> every verifier is a Claude
+  agent — all 9 rubric grades are Claude judging Claude. The rubric is mostly measurement-based (the verifier physically
+  observes viewport positions, scroll behaviour and validation messages via Playwright), which limits bias, but there is
+  no cross-model anchor this time. Read the absolute scores with that in mind.</div>
+
+  <h3>Static source checks (phase 1 — idiom gate)</h3>
+  <div class="card pad" style="padding-top:6px;padding-bottom:6px">
+    <table>
+      <thead><tr><th>Problem</th><th class="n">claude</th><th class="n">local-mcp</th><th class="n">no-skills</th><th>what slipped</th></tr></thead>
+      <tbody>
+        <tr><td><code>basic_layout</code> <span class="mini">(7)</span></td><td class="n">n/a*</td><td class="n">n/a*</td><td class="n">5/7</td><td class="mini">no-skills: missing <code>HorizontalLayout</code> + <code>VerticalLayout</code> (built with plain <code>Div</code>) · *claude + local-mcp rows hung</td></tr>
+        <tr><td><code>basic_form</code> <span class="mini">(15)</span></td><td class="n">n/a*</td><td class="n">12/15</td><td class="n">15/15</td><td class="mini">local-mcp: no FormLayout responsive steps, no <code>setColspan</code>, one inline style · *claude hung</td></tr>
+        <tr><td><code>md_ui_spec</code> <span class="mini">(19)</span></td><td class="n">n/a*</td><td class="n">16/19</td><td class="n">17/19</td><td class="mini">both: no <code>Composite&lt;FormLayout&gt;</code> + inline styles; local-mcp also no <code>ConfirmDialog</code> · *claude hung</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="mini">*All three <code>claude</code> solve rows and the <code>basic_layout</code> <code>local-mcp</code> row hung in phase 1 (agent-SDK exit hang), so their static grades weren't recorded — see <a href="#layout">§4</a> and <a href="#caveats">§8</a>. No <b>critical</b> check failed where recorded.</p>
+</section>
+
+<!-- ===================== COST ===================== -->
+<section id="cost">
+  <h2><span class="num">3</span> Cost</h2>
+  <p class="sub">Solve cost per problem (USD, shared 0 → $7 scale). <span class="c-claude">claude</span>'s bars are all empty — every one of its solves hung and recorded $0.</p>
+
+  <div class="grid2">
+    <div class="card chartcard">
+      <p class="chart-title">Solve cost per problem</p>
+      <p class="chart-sub">USD · same scale across all rows · 100% = $7</p>
+      <div style="margin:4px 0 2px"><span class="mini" style="font-weight:700">basic_layout</span></div>
+      <div class="row"><div class="name c-claude">claude</div><div class="track"><div class="fill dead" style="width:34%">hung · $0 recorded</div></div></div>
+      <div class="row"><div class="name c-localmcp">local-mcp</div><div class="track"><div class="fill dead" style="width:34%">hung · $0 recorded</div></div></div>
+      <div class="row"><div class="name c-noskills">no-skills</div><div class="track"><div class="fill noskills" style="width:23.9%">$1.67</div></div></div>
+      <div style="margin:14px 0 2px"><span class="mini" style="font-weight:700">basic_form</span></div>
+      <div class="row"><div class="name c-claude">claude</div><div class="track"><div class="fill dead" style="width:34%">hung · $0 recorded</div></div></div>
+      <div class="row"><div class="name c-localmcp">local-mcp</div><div class="track"><div class="fill localmcp" style="width:83.9%">$5.87</div></div></div>
+      <div class="row"><div class="name c-noskills">no-skills</div><div class="track"><div class="fill noskills" style="width:29.3%">$2.05</div></div></div>
+      <div style="margin:14px 0 2px"><span class="mini" style="font-weight:700">md_ui_spec</span></div>
+      <div class="row"><div class="name c-claude">claude</div><div class="track"><div class="fill dead" style="width:34%">hung · $0 recorded</div></div></div>
+      <div class="row"><div class="name c-localmcp">local-mcp</div><div class="track"><div class="fill localmcp" style="width:78%">$5.46</div></div></div>
+      <div class="row"><div class="name c-noskills">no-skills</div><div class="track"><div class="fill noskills" style="width:96.1%">$6.73</div></div></div>
+      <div class="axis"><span>$0</span><span>$7</span></div>
+    </div>
+
+    <div>
+      <div class="card pad">
+        <p class="chart-title" style="margin-bottom:12px">Total by agent <span class="mini">(solve + verify)</span></p>
+        <table>
+          <thead><tr><th>Agent</th><th class="n">solve</th><th class="n">verify</th><th class="n">total</th></tr></thead>
+          <tbody>
+            <tr><td><span class="chip c-claude"><span class="dot d-claude"></span>claude</span></td><td class="n" style="color:var(--red)">$0.00*</td><td class="n">$12.36</td><td class="n best">$12.36*</td></tr>
+            <tr><td><span class="chip c-localmcp"><span class="dot d-localmcp"></span>local-mcp</span></td><td class="n">$11.33</td><td class="n">$13.99</td><td class="n best">$25.32</td></tr>
+            <tr><td><span class="chip c-noskills"><span class="dot d-noskills"></span>no-skills</span></td><td class="n">$10.46</td><td class="n">$13.66</td><td class="n best">$24.12</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="stat" style="margin-top:16px">
+        <div class="lbl">The cost picture is one-sided this run…</div>
+        <div style="font-size:16px;font-weight:700;margin:6px 0 0">…claude's solve spend is missing entirely (3 hung rows, $0).</div>
+        <div class="sm">On their recorded solves, local-mcp and no-skills cost $11.33 / $10.46 across the three problems; verify (Claude grading via Playwright) is the bigger line at ~$13–14 each. The $61.80 total is understated by claude's three lost solves.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== basic_layout ===================== -->
+<section id="layout">
+  <h2><span class="num">4</span> basic_layout <span class="mini" style="font-weight:400;font-size:15px">· responsive toolbar view · rubric 24</span></h2>
+  <p class="sub">Rubric: <span class="c-noskills">no-skills 21</span> · <span class="c-claude">claude 20</span> · <span class="c-localmcp">local-mcp 20</span>. The 480px bug recurred and a new plain-<code>Div</code> idiom miss hit all three; the baseline edges it by losing one fewer narrow-viewport bullet.</p>
+
+  <div class="card pad" style="margin-bottom:16px">
+    <table>
+      <thead><tr><th>solver</th><th class="n">static</th><th class="n">cost</th><th class="n">wall</th><th class="n">turns</th><th class="n">mcp</th><th class="n">tool (err)</th></tr></thead>
+      <tbody>
+        <tr><td><span class="c-claude">claude</span></td><td class="n" colspan="6" style="color:var(--red)">row hung — reaped at the 45-min cap (agent-SDK exit hang) · no phase-1 metrics · workspace built OK (graded 20/24 in phase 2)</td></tr>
+        <tr><td><span class="c-localmcp">local-mcp</span></td><td class="n" colspan="6" style="color:var(--red)">row hung — reaped at the 45-min cap · no phase-1 metrics · workspace built OK (graded 20/24 in phase 2)</td></tr>
+        <tr><td><span class="c-noskills">no-skills</span></td><td class="n">5/7</td><td class="n">$1.67</td><td class="n">266s</td><td class="n">46</td><td class="n">12</td><td class="n">45 (5)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note" style="margin-bottom:14px">🔎 <b>The 480px breakpoint bug — a third time.</b> Every solver's mobile rule is gated on
+  <code>@media (max-width: 379px)</code>; the rubric tests <b>320 / 375 / 480</b>. All three stack the toolbar groups correctly at
+  320/375 but leave them on one row at 480 (where items also stop growing to share the row, and on two builds an item is clipped
+  off the 480px edge or measures under the 80px floor). Identical to both prior sweeps — strong evidence the task's "narrow"
+  definition nudges this breakpoint.</div>
+
+  <div class="ded noskills"><span class="who c-noskills"><span class="dot d-noskills"></span>no-skills</span><span class="pts">−3</span>
+    <p>Narrow-viewport at 480px (−2: the two groups share one row, and items don't grow to share the row — they render at intrinsic
+    width and wrap within the group) plus Vaadin-specific (−1: the view <code>extends Div</code> and builds the root, both toolbars
+    and every group from plain <code>Div</code> — no <code>HorizontalLayout</code>/<code>VerticalLayout</code> anywhere). <b>21/24, best of three.</b></p></div>
+  <div class="ded claude"><span class="who c-claude"><span class="dot d-claude"></span>claude</span><span class="pts">−4</span>
+    <p>Same family of misses, one worse: narrow-viewport at 480px (−3: groups share a row; items don't grow; <b>Button&nbsp;4 is clipped
+    off the right edge</b> — spans x=450..533 on a 480px viewport) plus Vaadin-specific (−1: the toolbars are plain <code>Div</code> where a
+    <code>HorizontalLayout</code> is the idiomatic, explicitly-named choice).</p></div>
+  <div class="ded localmcp"><span class="who c-localmcp"><span class="dot d-localmcp"></span>local-mcp</span><span class="pts">−4</span>
+    <p>The same three 480px bullets (groups share a row; items don't grow; the top toolbar's 5 items total ~492px &gt; 480 and overflow,
+    with <b>Button&nbsp;1 at 79px</b>, under the 80px floor) plus Vaadin-specific (−1: root, toolbars and groups all plain <code>Div</code> on custom flexbox CSS).</p></div>
+</section>
+
+<!-- ===================== basic_form ===================== -->
+<section id="form">
+  <h2><span class="num">5</span> basic_form <span class="mini" style="font-weight:400;font-size:15px">· responsive onboarding form · rubric 31</span></h2>
+  <p class="sub">Rubric: <span class="c-claude">claude 31</span> · <span class="c-localmcp">local-mcp 31</span> · <span class="c-noskills">no-skills 30</span>. Near-perfect; the only rubric miss anywhere is a date-format detail.</p>
+
+  <div class="card pad" style="margin-bottom:16px">
+    <table>
+      <thead><tr><th>solver</th><th class="n">static</th><th class="n">cost</th><th class="n">wall</th><th class="n">turns</th><th class="n">mcp</th><th class="n">tool (err)</th></tr></thead>
+      <tbody>
+        <tr><td><span class="c-claude">claude</span></td><td class="n" colspan="6" style="color:var(--red)">row hung — reaped at the 45-min cap · no phase-1 metrics · workspace built OK (graded 31/31 in phase 2)</td></tr>
+        <tr><td><span class="c-localmcp">local-mcp</span></td><td class="n">12/15</td><td class="n">$5.87</td><td class="n">15.3m</td><td class="n">73</td><td class="n">27</td><td class="n">71 (4)</td></tr>
+        <tr><td><span class="c-noskills">no-skills</span></td><td class="n">15/15</td><td class="n">$2.05</td><td class="n">402s</td><td class="n">42</td><td class="n">11</td><td class="n">41 (1)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ded perfect"><span class="who" style="color:var(--green)">✓ claude &amp; local-mcp</span><span class="pts" style="color:var(--green)">31/31</span>
+    <p>Both skill variants produced a fully-conformant form: 7 sections in order, correct field config, two columns aligned across
+    sections at wide viewports, single column at narrow, a reusable component, and radio/checkbox groups oriented per the mockup.
+    <span class="c-localmcp">local-mcp</span>'s static dings (no FormLayout responsive steps, no <code>setColspan</code>, one inline style)
+    weren't rubric-penalized — the rendered result was correct.</p></div>
+  <div class="ded noskills"><span class="who c-noskills"><span class="dot d-noskills"></span>no-skills</span><span class="pts">−1</span>
+    <p>Field configuration (−1): the date fields show the <code>dd.mm.yyyy</code> hint but the <code>DatePicker</code> rejects that format —
+    typing <code>15.06.1990</code> yields an empty, invalid value while <code>6/15/1990</code> parses. No <code>DatePickerI18n</code>/locale was
+    configured, so only the default en-US format is accepted. The bullet needs both the hint and acceptance. 30/31.</p></div>
+  <p class="mini"><b>Skills delta:</b> +1 — the only run-wide point separating skills from baseline, on a single date-format detail.</p>
+</section>
+
+<!-- ===================== md_ui_spec ===================== -->
+<section id="spec">
+  <h2><span class="num">6</span> md_ui_spec <span class="mini" style="font-weight:400;font-size:15px">· Employees CRUD from a markdown spec · rubric 48</span></h2>
+  <p class="sub">Rubric: <span class="c-claude">claude 46</span> · <span class="c-noskills">no-skills 46</span> · <span class="c-localmcp">local-mcp 45</span>. The problem where skills led by +2 on the morning sweep — here the baseline ties the best skill variant.</p>
+
+  <div class="card pad" style="margin-bottom:16px">
+    <table>
+      <thead><tr><th>solver</th><th class="n">static</th><th class="n">cost</th><th class="n">wall</th><th class="n">turns</th><th class="n">mcp</th><th class="n">tool (err)</th></tr></thead>
+      <tbody>
+        <tr><td><span class="c-claude">claude</span></td><td class="n" colspan="6" style="color:var(--red)">row hung — reaped at the 45-min cap · no phase-1 metrics · workspace built OK (graded 46/48 in phase 2)</td></tr>
+        <tr><td><span class="c-localmcp">local-mcp</span></td><td class="n">16/19</td><td class="n">$5.46</td><td class="n">12.8m</td><td class="n">70</td><td class="n">27</td><td class="n">69 (10)</td></tr>
+        <tr><td><span class="c-noskills">no-skills</span></td><td class="n">17/19</td><td class="n">$6.73</td><td class="n">17.9m</td><td class="n">89</td><td class="n">32</td><td class="n">88 (6)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ded claude"><span class="who c-claude"><span class="dot d-claude"></span>claude</span><span class="pts">−2</span>
+    <p>Two Vaadin-specific misses: <code>EmployeeForm extends FormLayout</code> directly instead of <code>Composite&lt;FormLayout&gt;</code>,
+    and the <code>Binder</code> binds via String property names (<code>.bind("firstName")</code>) rather than method references
+    (<code>Employee::getFirstName</code>). 46/48.</p></div>
+  <div class="ded noskills"><span class="who c-noskills"><span class="dot d-noskills"></span>no-skills</span><span class="pts">−2</span>
+    <p>Also 46/48: <code>EmployeeForm extends FormLayout</code> (not <code>Composite&lt;FormLayout&gt;</code>), plus a theme-mixing ding — it
+    applies the Aura stylesheet via <code>@StyleSheet(Aura.STYLESHEET)</code> but uses Lumo-named variants
+    (<code>ButtonVariant.LUMO_PRIMARY</code>/<code>LUMO_ERROR</code>, <code>GridVariant.LUMO_NO_BORDER</code>).</p></div>
+  <div class="ded localmcp"><span class="who c-localmcp"><span class="dot d-localmcp"></span>local-mcp</span><span class="pts">−3</span>
+    <p>The lone 45: Validation (−1: an invalid <b>email format</b> shows only a red border with no message text — the
+    <code>EmailValidator</code> message never renders), plus two Vaadin-specific (−2: <code>EmployeeForm extends FormLayout</code>; and the
+    delete uses a hand-built <code>new Dialog()</code> with manual buttons rather than a <code>ConfirmDialog</code>).</p></div>
+  <p class="mini"><b>Skills delta:</b> none — the baseline tied <span class="c-claude">claude</span> (46) and beat <span class="c-localmcp">local-mcp</span> (45). On the morning sweep skills led <code>md_ui_spec</code> by +2; that gap didn't hold.</p>
+</section>
+
+<!-- ===================== Observations ===================== -->
+<section id="obs">
+  <h2><span class="num">7</span> Cross-cutting observations</h2>
+  <div class="grid2">
+    <div class="card pad"><h3 style="margin-top:0">Skills didn't separate this run</h3>
+      <p style="margin:0;font-size:14.5px">Across the A/B/C sweeps the <code>md_ui_spec</code> skills lead (+2 on the morning Claude-graded
+      run) collapsed to 0 here, and the <span class="c-noskills">no-skills</span> baseline posted the top mean (93.4%). The durable read
+      isn't "skills don't help" — it's that a single run can't resolve a 1–2 point gap. Use <code>REPEAT=N</code> before treating any of
+      this as a ranking.</p></div>
+    <div class="card pad"><h3 style="margin-top:0">The 480px bug reproduces (3rd time)</h3>
+      <p style="margin:0;font-size:14.5px">Three independent sweeps, the same <code>max-width: 379px</code> chosen by every agent, the same lost
+      narrow-viewport bullets at 480px. This is firmly a benchmark-level signal — worth clarifying the task's narrow-viewport definition
+      before reading the <code>basic_layout</code> spread as an agent skill gap.</p></div>
+    <div class="card pad"><h3 style="margin-top:0">Idiom is where points leak, not function</h3>
+      <p style="margin:0;font-size:14.5px">Every app worked; the deductions are idiom. On <code>basic_layout</code> all three reached for plain
+      <code>Div</code> + CSS instead of <code>HorizontalLayout</code>/<code>VerticalLayout</code>; on <code>md_ui_spec</code> all three extend
+      <code>FormLayout</code> rather than <code>Composite&lt;FormLayout&gt;</code>, and the theme variants / <code>ConfirmDialog</code> conventions
+      slip. These are the framework-fluency points the rubric is built to catch.</p></div>
+    <div class="card pad"><h3 style="margin-top:0">The SDK hang is non-deterministic and costly</h3>
+      <p style="margin:0;font-size:14.5px">This run hung <b>4 of 9</b> solve rows (<span class="c-claude">claude</span> all three;
+      <span class="c-localmcp">local-mcp</span> one) plus one verifier row — well above the 1–2 of prior runs — and contradicted the
+      "first-problem cold-start" correlate (<span class="c-claude">claude</span> hung on problems 2 and 3 too). Workspaces built and graded
+      fine, but claude's whole solve-side telemetry is gone. Strengthens the case for the pre-warm / idle-watchdog fixes in the hang writeup.</p></div>
+  </div>
+</section>
+
+<!-- ===================== Caveats ===================== -->
+<section id="caveats">
+  <h2><span class="num">8</span> Caveats &amp; data gaps</h2>
+  <div class="card pad">
+    <ul class="clean">
+      <li><b>Self-grading is total</b> (no Codex) — every grade is Claude-on-Claude. The grading is largely measurement-based (the
+        verifier drives the running app via Playwright), but there's no cross-model anchor this run; take the absolute scores as Claude's own measurement.</li>
+      <li><b>claude's phase-1 data is missing.</b> All three <span class="c-claude">claude</span> (hosted MCP) solve rows hung — the
+        agent-SDK finished its work but didn't exit, so the per-row timeout reaped each one. Its solve cost ($0) and trace columns are blank.
+        The workspaces were complete and phase 2 graded them 20 / 31 / 46, which are the valid scores — but don't read claude's
+        <code>$12.36</code> total, or the <code>$61.80</code> sweep total, as complete.</li>
+      <li><b>One verdict is a re-grade.</b> <code>md_ui_spec</code>/<span class="c-noskills">no-skills</span>'s original verify row
+        (<code>eval-6PO</code>) hung <em>after</em> writing its verdict to disk — the same SDK hang, this time on the verifier. A single-row
+        re-grade (<a href="http://localhost:15500/eval/eval-0ub-2026-06-11T22:19:03"><code>eval-0ub</code></a>) reproduced 46/48 cleanly and is the cited verdict.</li>
+      <li><b>n = 1 per cell</b> — treat ±1–2 rubric points as noise. This run is itself the evidence: the <code>md_ui_spec</code> skills gap moved 2 → 0 between sweeps.</li>
+      <li><b>Token columns understate throughput</b> by design — use <code>cost</code>, not tokens, for efficiency (and note claude's is missing).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================== Screenshots ===================== -->
+<section id="shots">
+  <h2><span class="num">9</span> Results gallery <span class="mini" style="font-weight:400;font-size:15px">· none this run</span></h2>
+  <div class="note">📷 <b>No screenshots this run.</b> <code>attach_shots.js</code> recognized solver captures from only two rows
+  (<code>basic_layout</code>/<span class="c-localmcp">local-mcp</span> and <code>basic_form</code>/<span class="c-claude">claude</span>) — and
+  <em>both of those rows hung</em>, so their error rows carry no attachable response/image. The rows that completed did capture Playwright
+  screenshots, but under non-standard filenames the attach step doesn't pick up. Per the bench's practice (embed only the
+  content-addressed blobs attached to a row, never PNGs pulled off disk that a later run could overwrite), no images are inlined here.
+  The numbers above are unaffected — they come straight from the phase-2 verdicts.</div>
+</section>
+
+</div>
+
+<footer>
+  Source: promptfoo evals <code>eval-oVM</code> … <code>eval-0ub</code> on <code>localhost:15500</code>, 2026-06-11 ·
+  three Claude variants, Claude-graded, two-phase solve→verify (<code>bench/README.md</code>) ·
+  <code>md_ui_spec</code>/no-skills re-graded (<code>eval-0ub</code>) after a verifier hang.
+</footer>
+
+</body>
+</html>

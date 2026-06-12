@@ -86,9 +86,16 @@
 <h1>Run reports</h1>
 <p class="lede2">One visual report per benchmark sweep — a promptfoo solve&rarr;verify pass over the
 three Vaadin problems. Each links rubric scores, costs, per-problem deductions and the solvers'
-result screenshots. Newest first; 3 reports on file.</p>
+result screenshots. Newest first; 4 reports on file.</p>
 </header><div class="wrap"><section style="border-top:0">
 <div class="reportgrid">
+<div class="report">
+  <div class="rdate">2026-06-11 · 18:51 run</div>
+  <div class="rtitle">agentic-DX bench — 2026-06-11 results (run 3 · Claude-graded)</div>
+  <div class="ragents"><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + hosted MCP</span><span class="chip c-localmcp"><span class="dot d-localmcp"></span>claude-local-mcp · skills + local MCP</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · baseline</span></div>
+  <div class="rlede">A third sweep of the same three Claude variants, this time Claude-graded (self-grading; no Codex). The skills edge doesn&#x27;t reproduce: the no-skills baseline posts the top mean (93.4%) and wins basic_layout while the skill variants take basic_form, all three within a point. basic_form near-perfect; the 480px narrow-viewport bug recurs a third time; all three leak idiom points (plain Div over HorizontalLayout, FormLayout over Composite). The SDK hang was rampant — claude hung on all three solves ($0 solve cost recorded) and one verifier row was re-graded.</div>
+  <div class="rlinks"><a class="btn" href="bench-results-2026-06-11-run3.html">Open report →</a></div>
+</div>
 <div class="report">
   <div class="rdate">2026-06-11 · 09:00 run</div>
   <div class="rtitle">agentic-DX bench — 2026-06-11 results (Codex verifier)</div>
