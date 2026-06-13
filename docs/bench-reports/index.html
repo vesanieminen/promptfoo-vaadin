@@ -87,7 +87,7 @@
 <h1>Run reports</h1>
 <p class="lede2">One visual report per benchmark sweep — a promptfoo solve&rarr;verify pass over the
 three Vaadin problems. Each links rubric scores, costs, per-problem deductions and the solvers'
-result screenshots. Newest first; 7 reports on file.</p>
+result screenshots. Newest first; 5 reports on file.</p>
 </header><div class="wrap"><section style="border-top:0">
 <div class="reportgrid">
 <div class="report">
@@ -96,20 +96,6 @@ result screenshots. Newest first; 7 reports on file.</p>
   <div class="ragents"><span class="chip c-claude"><span class="dot d-claude"></span>claude · skills + Vaadin MCP · Playwright MCP</span><span class="chip c-cli"><span class="dot d-cli"></span>claude-pw-cli · skills + Vaadin MCP · Playwright CLI</span><span class="chip c-noskills"><span class="dot d-noskills"></span>claude-no-skills · vanilla · Playwright MCP</span></div>
   <div class="rlede">Three Claude rows folding <b>two clean A/Bs</b> into one sweep: browser transport (<b>Playwright MCP vs CLI</b>, all else equal) and Vaadin help (<b>skills + docs MCP vs vanilla</b>, same MCP browser). The transport A/B is an <b>exact tie</b> on every problem (20/24 · 30/31 · 48/48). The skills add <b>~4 pooled points</b> (95.1% vs 91.3%) — all on Vaadin <em>idiom</em>: vanilla used a CSS-grid Div over FormLayout on basic_form and shipped a silently-broken delete flow + mixed Aura/Lumo theming on md_ui_spec. The CLI row matched claude's scores at <b>~26% lower cost</b> ($17.31 vs $23.29). The 480px breakpoint bug recurs on all three. <span class="mini">(basic_form's two phase-2 verdicts recovered from disk after the agent-SDK teardown hang.)</span></div>
   <div class="rlinks"><a class="btn" href="bench-results-2026-06-13-mcp-vs-cli-vs-vanilla.html">Open report →</a></div>
-</div>
-<div class="report">
-  <div class="rdate">2026-06-12 · 18:42 run (run 2)</div>
-  <div class="rtitle">agentic-DX bench — Playwright MCP vs CLI (leak fixed)</div>
-  <div class="ragents"><span class="chip c-claude"><span class="dot d-claude"></span>claude · Playwright MCP (playwright-cli denied)</span><span class="chip c-cli"><span class="dot d-cli"></span>claude-pw-cli · playwright-cli + skill</span></div>
-  <div class="rlede">The clean re-run after run 1 exposed the transport leak. Fix: <code>disallowed_tools: ['Bash(playwright-cli:*)']</code> on the MCP rows (probe-verified to block the compound <code>cd … &amp;&amp; playwright-cli</code> form too). <b>The leak is closed</b> — the MCP rows now use the Playwright MCP (md_ui_spec flipped from 17-CLI/0-MCP in run 1 to 0-CLI/17-MCP here). Verdict holds: <b>quality is a tie</b> (CLI 95.1% vs MCP 92.7% mean — the leader flipped vs run 1, which is the n=1 noise), and <b>no blanket token-efficiency win</b> (CLI lighter on the simple task, heavier on the complex one). One solve hung (basic_form/claude) but graded fine on its built workspace.</div>
-  <div class="rlinks"><a class="btn" href="bench-results-2026-06-12-run2-leak-fixed.html">Open report →</a></div>
-</div>
-<div class="report">
-  <div class="rdate">2026-06-12 · 16:20 run (run 1)</div>
-  <div class="rtitle">agentic-DX bench — Playwright MCP vs CLI+skills</div>
-  <div class="ragents"><span class="chip c-claude"><span class="dot d-claude"></span>claude · Playwright MCP</span><span class="chip c-cli"><span class="dot d-cli"></span>claude-pw-cli · playwright-cli + skill</span></div>
-  <div class="rlede">A two-row A/B isolating one variable — how the solver drives the browser: the Playwright <b>MCP</b> vs the <b>`playwright-cli`</b> command + its bundled skill (everything else identical, Claude-graded). <b>Quality is a tie</b> (means 94.4% vs 93.0%, within noise — CLI wins md_ui_spec, MCP wins basic_form, tie on basic_layout). The CLI is <b>no token-saver here</b> — equal-or-more output tokens on all three, ~5% higher solve cost. Biggest finding: the contrast <b>leaked</b> — because <code>playwright-cli</code> is on PATH, the MCP row used it on 2 of 3 problems (17 CLI / 0 MCP calls each), so only basic_layout is a clean transport cell. The 480px breakpoint bug recurs on both.</div>
-  <div class="rlinks"><a class="btn" href="bench-results-2026-06-12-playwright-mcp-vs-cli.html">Open report →</a></div>
 </div>
 <div class="report">
   <div class="rdate">2026-06-11 · 18:51 run</div>
