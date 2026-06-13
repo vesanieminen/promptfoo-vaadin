@@ -305,6 +305,7 @@
 <!-- ===================== basic_layout ===================== -->
 <section id="layout">
   <h2><span class="num">6</span> basic_layout <span class="mini" style="font-weight:400;font-size:15px">· responsive toolbar view · rubric 24</span></h2>
+  <div style="margin:14px 0 2px;padding:12px 16px;background:#f3f6fa;border:1px solid #e3e8ef;border-radius:10px;font-size:13.5px;line-height:1.6;color:#3a4656">📋 <b style="color:#16202e">The task:</b> An app view at <code>/basic_layout</code> with fixed top and bottom toolbars — each grouping components to the left and right — wrapped around one content section that is the <i>only</i> thing allowed to scroll. On a narrow viewport (&lt;380px) every group wraps to its own full-width row.</div>
   <p class="sub">Rubric: <b>all three 20/24</b>. A three-way tie — every row stacks correctly at 320/375 but trips the same 480 px breakpoint
   bug and the same plain-<code>Div</code> idiom miss. Tooling and skills made no difference here.</p>
   <div class="card pad" style="margin-bottom:16px">
@@ -342,6 +343,7 @@
 <!-- ===================== basic_form ===================== -->
 <section id="form">
   <h2><span class="num">7</span> basic_form <span class="mini" style="font-weight:400;font-size:15px">· responsive onboarding form · rubric 31</span></h2>
+  <div style="margin:14px 0 2px;padding:12px 16px;background:#f3f6fa;border:1px solid #e3e8ef;border-radius:10px;font-size:13.5px;line-height:1.6;color:#3a4656">📋 <b style="color:#16202e">The task:</b> A reusable onboarding form at <code>/basic_form</code>, capped at 800px wide and centred. Fields sit in two aligned columns at ≥800px and collapse to a single column below ~380px, with required indicators and placeholder text — layout only, no form logic.</div>
   <p class="sub">Rubric: <span class="c-mcp">claude 30</span> · <span class="c-cli">pw-cli 30</span> · <span class="c-van">vanilla 29</span>.
   The skills rows are near-perfect and tie; vanilla loses two Vaadin-idiom points by building the form layout with CSS grid instead of
   <code>FormLayout</code>.</p>
@@ -376,6 +378,7 @@
 <!-- ===================== md_ui_spec ===================== -->
 <section id="spec">
   <h2><span class="num">8</span> md_ui_spec <span class="mini" style="font-weight:400;font-size:15px">· Employees CRUD from a markdown spec · rubric 48</span></h2>
+  <div style="margin:14px 0 2px;padding:12px 16px;background:#f3f6fa;border:1px solid #e3e8ef;border-radius:10px;font-size:13.5px;line-height:1.6;color:#3a4656">📋 <b style="color:#16202e">The task:</b> An Employees CRUD screen at <code>/employees</code> built to a Markdown UI spec: a <code>Grid</code> beside a 400px edit drawer (a <code>Composite&lt;FormLayout&gt;</code> with First/Last name, Job title, Since and Email) plus Add / Save / Revert / Delete — graded on matching the spec's structure and Vaadin idioms.</div>
   <p class="sub">Rubric: <span class="c-mcp">claude 48</span> · <span class="c-cli">pw-cli 48</span> · <span class="c-van">vanilla 45</span>.
   Both skills rows are <b>flawless</b>; vanilla loses three points — including a <b>delete flow that's broken in the running app</b>, the
   clearest functional gap in the sweep.</p>
