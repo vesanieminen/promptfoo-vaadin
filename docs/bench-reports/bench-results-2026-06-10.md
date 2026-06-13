@@ -213,4 +213,5 @@ faster despite a near-identical token budget.
 
 *Source: promptfoo evals `eval-mVK` … `eval-6HA` on `localhost:15500`,
 2026-06-10. Generated from the eval JSON via the bench's two-phase
-solve/verify pipeline (`bench/README.md`).*
+solve/verify pipeline (`bench/README.md`). Auth: **Claude subscription**
+(`CLAUDE_CODE_OAUTH_TOKEN`), not the metered API key.*

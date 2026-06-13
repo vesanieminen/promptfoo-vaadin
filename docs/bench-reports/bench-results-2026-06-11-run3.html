@@ -112,7 +112,7 @@
   <a href="#obs">Observations</a>
   <a href="#caveats">Caveats</a>
   <a href="#shots">Screenshots</a>
-  <span class="pager" style="margin-left:auto;display:flex;gap:4px;align-items:center;padding-left:10px;border-left:1px solid var(--line)"><a href="bench-results-2026-06-11-run2.html" title="Older run — 2026-06-11 · 09:00 (Codex verifier)">← Older</a><a href="bench-results-2026-06-13-mcp-vs-cli-vs-vanilla.html" title="Newer run — 2026-06-13 · MCP vs CLI vs vanilla">Newer →</a><a href="index.html" title="All run reports">All ↑</a></span>
+  <span class="pager" style="margin-left:auto;display:flex;gap:4px;align-items:center;padding-left:10px;border-left:1px solid var(--line)"><a href="bench-results-2026-06-11-run2.html" title="Older run — 2026-06-11 · 09:00 (Codex verifier)">← Older</a><a href="bench-results-2026-06-12.html" title="Newer run — 2026-06-12 (Codex verifier · effort=medium)">Newer →</a><a href="index.html" title="All run reports">All ↑</a></span>
 </div></nav>
 
 <header class="hero">
@@ -137,7 +137,7 @@
   <h2><span class="num">1</span> TL;DR</h2>
   <p class="sub">Eval range: <a href="http://localhost:15500/eval/eval-oVM-2026-06-11T18:51:34"><code>eval-oVM</code></a>
   (18:51) → <a href="http://localhost:15500/eval/eval-0ub-2026-06-11T22:19:03"><code>eval-0ub</code></a>
-  (22:35) on <code>localhost:15500</code> · ~3h40m wall-clock (4 of 6 phases ran to the 45-min row cap on hung rows).</p>
+  (22:35) on <code>localhost:15500</code> · ~3h 40min wall-clock (4 of 6 phases ran to the 45-min row cap on hung rows).</p>
 
   <div class="grid3" style="margin-bottom:16px">
     <div class="stat"><div class="big">a dead heat</div><div class="lbl">the headline: skills ≈ baseline</div><div class="sm">means within 1 pt — no-skills 93.4% · claude 93.1% · local-mcp 92.4%</div></div>
@@ -271,6 +271,7 @@
 <!-- ===================== basic_layout ===================== -->
 <section id="layout">
   <h2><span class="num">4</span> basic_layout <span class="mini" style="font-weight:400;font-size:15px">· responsive toolbar view · rubric 24</span></h2>
+  <div style="margin:14px 0 2px;padding:12px 16px;background:#f3f6fa;border:1px solid #e3e8ef;border-radius:10px;font-size:13.5px;line-height:1.6;color:#3a4656">📋 <b style="color:#16202e">The task:</b> An app view at <code>/basic_layout</code> with fixed top and bottom toolbars — each grouping components to the left and right — wrapped around one content section that is the <i>only</i> thing allowed to scroll. On a narrow viewport (&lt;380px) every group wraps to its own full-width row.</div>
   <p class="sub">Rubric: <span class="c-noskills">no-skills 21</span> · <span class="c-claude">claude 20</span> · <span class="c-localmcp">local-mcp 20</span>. The 480px bug recurred and a new plain-<code>Div</code> idiom miss hit all three; the baseline edges it by losing one fewer narrow-viewport bullet.</p>
 
   <div class="card pad" style="margin-bottom:16px">
@@ -306,6 +307,7 @@
 <!-- ===================== basic_form ===================== -->
 <section id="form">
   <h2><span class="num">5</span> basic_form <span class="mini" style="font-weight:400;font-size:15px">· responsive onboarding form · rubric 31</span></h2>
+  <div style="margin:14px 0 2px;padding:12px 16px;background:#f3f6fa;border:1px solid #e3e8ef;border-radius:10px;font-size:13.5px;line-height:1.6;color:#3a4656">📋 <b style="color:#16202e">The task:</b> A reusable onboarding form at <code>/basic_form</code>, capped at 800px wide and centred. Fields sit in two aligned columns at ≥800px and collapse to a single column below ~380px, with required indicators and placeholder text — layout only, no form logic.</div>
   <p class="sub">Rubric: <span class="c-claude">claude 31</span> · <span class="c-localmcp">local-mcp 31</span> · <span class="c-noskills">no-skills 30</span>. Near-perfect; the only rubric miss anywhere is a date-format detail.</p>
 
   <div class="card pad" style="margin-bottom:16px">
@@ -334,6 +336,7 @@
 <!-- ===================== md_ui_spec ===================== -->
 <section id="spec">
   <h2><span class="num">6</span> md_ui_spec <span class="mini" style="font-weight:400;font-size:15px">· Employees CRUD from a markdown spec · rubric 48</span></h2>
+  <div style="margin:14px 0 2px;padding:12px 16px;background:#f3f6fa;border:1px solid #e3e8ef;border-radius:10px;font-size:13.5px;line-height:1.6;color:#3a4656">📋 <b style="color:#16202e">The task:</b> An Employees CRUD screen at <code>/employees</code> built to a Markdown UI spec: a <code>Grid</code> beside a 400px edit drawer (a <code>Composite&lt;FormLayout&gt;</code> with First/Last name, Job title, Since and Email) plus Add / Save / Revert / Delete — graded on matching the spec's structure and Vaadin idioms.</div>
   <p class="sub">Rubric: <span class="c-claude">claude 46</span> · <span class="c-noskills">no-skills 46</span> · <span class="c-localmcp">local-mcp 45</span>. The problem where skills led by +2 on the morning sweep — here the baseline ties the best skill variant.</p>
 
   <div class="card pad" style="margin-bottom:16px">
@@ -424,7 +427,8 @@
 <footer>
   Source: promptfoo evals <code>eval-oVM</code> … <code>eval-0ub</code> on <code>localhost:15500</code>, 2026-06-11 ·
   three Claude variants, Claude-graded, two-phase solve→verify (<code>bench/README.md</code>) ·
-  <code>md_ui_spec</code>/no-skills re-graded (<code>eval-0ub</code>) after a verifier hang.
+  <code>md_ui_spec</code>/no-skills re-graded (<code>eval-0ub</code>) after a verifier hang ·
+  auth: <b>Claude subscription</b> (<code>CLAUDE_CODE_OAUTH_TOKEN</code>), not the metered API key.
 </footer>
 
 </body>
