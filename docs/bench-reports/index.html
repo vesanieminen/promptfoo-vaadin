@@ -64,6 +64,7 @@
   .c-localmcp{color:#2563eb} .d-localmcp{background:#2563eb}
   .c-noskills{color:#db2777} .d-noskills{background:#db2777}
   .c-codex{color:#d97706} .d-codex{background:#d97706}
+  .c-cli{color:#4f46e5} .d-cli{background:#4f46e5}
 
   .lede2{font-size:19px;color:var(--muted);max-width:760px;margin:0}
   .reportgrid{display:flex;flex-direction:column;gap:16px;margin-top:6px}
@@ -130,7 +131,7 @@
   .srow .sbar i .co{margin-left:auto;font-weight:600;opacity:.92}
   .srow.win .sname{color:var(--ink);font-weight:800}
   .srow.win .sbar i{box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
-  .bg-claude{background:#0d9488}.bg-localmcp{background:#2563eb}.bg-noskills{background:#db2777}.bg-codex{background:#d97706}
+  .bg-claude{background:#0d9488}.bg-localmcp{background:#2563eb}.bg-noskills{background:#db2777}.bg-codex{background:#d97706}.bg-cli{background:#4f46e5}
   .scap{font-size:12.5px;color:#9aa7b5;margin:8px 0 0;display:flex;justify-content:flex-start;align-items:center;gap:7px;flex-wrap:wrap}
   .scap>span:first-child{margin-right:auto}
   .gtag{font:700 12px/1 ui-monospace,monospace;letter-spacing:.03em;text-transform:uppercase;padding:5px 10px;border-radius:999px;white-space:nowrap}
@@ -144,26 +145,26 @@
 <h1>Run reports</h1>
 <p class="lede2">One visual report per benchmark sweep — a promptfoo solve&rarr;verify pass over the
 three Vaadin problems. Each links rubric scores, costs, per-problem deductions and the solvers'
-result screenshots. Newest first; 5 reports on file.</p>
+result screenshots. Newest first; 7 reports on file.</p>
 </header><div class="wrap">
 <section style="border-top:0">
 <h2><span class="num">↗</span> Rubric mean by run</h2>
 <p class="sub">Each line is one agent's mean rubric score (% of max, averaged over the three problems) across every sweep, oldest&rarr;newest. Higher is better.</p>
 <div class="card trendcard">
   <div class="trend-wrap">
-  <svg class="trend" viewBox="0 0 920 348" role="img" aria-label="Rubric mean by run, per agent">
+  <svg class="trend" viewBox="0 0 1340 348" role="img" aria-label="Rubric mean by run, per agent">
     <!-- Codex-graded columns (shaded) -->
     <rect class="band" x="371" y="20" width="210" height="288"></rect>
-    <rect class="band" x="791" y="20" width="129" height="288"></rect>
+    <rect class="band" x="791" y="20" width="210" height="288"></rect>
     <!-- y gridlines + labels (88–100%) -->
     <g class="grid">
-      <line x1="56" y1="20"  x2="900" y2="20"></line>
-      <line x1="56" y1="68"  x2="900" y2="68"></line>
-      <line x1="56" y1="116" x2="900" y2="116"></line>
-      <line x1="56" y1="164" x2="900" y2="164"></line>
-      <line x1="56" y1="212" x2="900" y2="212"></line>
-      <line x1="56" y1="260" x2="900" y2="260"></line>
-      <line x1="56" y1="308" x2="900" y2="308"></line>
+      <line x1="56" y1="20"  x2="1320" y2="20"></line>
+      <line x1="56" y1="68"  x2="1320" y2="68"></line>
+      <line x1="56" y1="116" x2="1320" y2="116"></line>
+      <line x1="56" y1="164" x2="1320" y2="164"></line>
+      <line x1="56" y1="212" x2="1320" y2="212"></line>
+      <line x1="56" y1="260" x2="1320" y2="260"></line>
+      <line x1="56" y1="308" x2="1320" y2="308"></line>
     </g>
     <g class="axis-lbl" text-anchor="end">
       <text x="42" y="24">100%</text>
@@ -181,33 +182,71 @@ result screenshots. Newest first; 5 reports on file.</p>
       <text x="476" y="328">06-11 b</text>
       <text x="686" y="328">06-11 c</text>
       <text x="896" y="328">06-12</text>
+      <text x="1106" y="328">06-13 a</text>
+      <text x="1316" y="328">06-13 b</text>
     </g>
     <!-- no-skills (pink) -->
-    <polyline points="56,204.8 266,202.4 476,245.6 686,178.4 896,238.4" stroke="#db2777"></polyline>
-    <g fill="#db2777"><circle cx="56" cy="204.8" r="5.5"><title>06-10 · claude-no-skills 92.3% · $23.02 total</title></circle><circle cx="266" cy="202.4" r="5.3"><title>06-11 a · claude-no-skills 92.4% · $22.19 total</title></circle><circle cx="476" cy="245.6" r="5.3"><title>06-11 b · claude-no-skills 90.6% · $22.39 total</title></circle><circle cx="686" cy="178.4" r="5.7"><title>06-11 c · claude-no-skills 93.4% · $24.12 total</title></circle><circle cx="896" cy="238.4" r="6.9"><title>06-12 · claude-no-skills 90.9% · $29.06 total</title></circle></g>
+    <polyline points="56,204.8 266,202.4 476,245.6 686,178.4 896,238.4 1106,255.2 1316,305.6" stroke="#db2777"></polyline>
+    <g fill="#db2777"><circle cx="56" cy="204.8" r="5.5"><title>06-10 · claude-no-skills 92.3% · $23.02 total</title></circle><circle cx="266" cy="202.4" r="5.3"><title>06-11 a · claude-no-skills 92.4% · $22.19 total</title></circle><circle cx="476" cy="245.6" r="5.3"><title>06-11 b · claude-no-skills 90.6% · $22.39 total</title></circle><circle cx="686" cy="178.4" r="5.7"><title>06-11 c · claude-no-skills 93.4% · $24.12 total</title></circle><circle cx="896" cy="238.4" r="6.9"><title>06-12 · claude-no-skills 90.9% · $29.06 total</title></circle><circle cx="1106" cy="255.2" r="5.1"><title>06-13 a · claude-no-skills 90.2% · $21.65 total</title></circle><circle cx="1316" cy="305.6" r="3.3"><title>06-13 b · claude-no-skills 88.1% · $14.02 total (conc. 2)</title></circle></g>
     <!-- local-mcp (blue), runs 2–5 -->
     <polyline points="266,137.6 476,154.4 686,202.4 896,248" stroke="#2563eb"></polyline>
     <g fill="#2563eb"><circle cx="266" cy="137.6" r="4.8"><title>06-11 a · claude-local-mcp 95.1% · $19.88 total</title></circle><circle cx="476" cy="154.4" r="6.5"><title>06-11 b · claude-local-mcp 94.4% · $27.46 total</title></circle><circle cx="686" cy="202.4" r="6.0"><title>06-11 c · claude-local-mcp 92.4% · $25.32 total</title></circle><circle cx="896" cy="248" r="5.9"><title>06-12 · claude-local-mcp 90.5% · $24.77* total</title></circle></g>
     <!-- claude (teal) -->
-    <polyline points="56,154.4 266,168.8 476,236 686,185.6 896,252.8" stroke="#0d9488"></polyline>
-    <g fill="#0d9488"><circle cx="56" cy="154.4" r="6.0"><title>06-10 · claude 94.4% · $25.17 total</title></circle><circle cx="266" cy="168.8" r="5.5"><title>06-11 a · claude 93.8% · $23.16 total</title></circle><circle cx="476" cy="236" r="7.4"><title>06-11 b · claude 91.0% · $31.35 total</title></circle><circle cx="686" cy="185.6" r="3.1"><title>06-11 c · claude 93.1% · $12.36* total</title></circle><circle cx="896" cy="252.8" r="6.3"><title>06-12 · claude 90.3% · $26.68 total</title></circle></g>
+    <polyline points="56,154.4 266,168.8 476,236 686,185.6 896,252.8 1106,178.4 1316,188.0" stroke="#0d9488"></polyline>
+    <g fill="#0d9488"><circle cx="56" cy="154.4" r="6.0"><title>06-10 · claude 94.4% · $25.17 total</title></circle><circle cx="266" cy="168.8" r="5.5"><title>06-11 a · claude 93.8% · $23.16 total</title></circle><circle cx="476" cy="236" r="7.4"><title>06-11 b · claude 91.0% · $31.35 total</title></circle><circle cx="686" cy="185.6" r="3.1"><title>06-11 c · claude 93.1% · $12.36* total</title></circle><circle cx="896" cy="252.8" r="6.3"><title>06-12 · claude 90.3% · $26.68 total</title></circle><circle cx="1106" cy="178.4" r="5.5"><title>06-13 a · claude 93.4% · $23.29 total</title></circle><circle cx="1316" cy="188.0" r="4.7"><title>06-13 b · claude 93.0% · $20.00* total (conc. 2, solve $0)</title></circle></g>
     <!-- codex (amber), run 1 only -->
     <g fill="#d97706"><circle cx="56" cy="70.4" r="9.9"><title>06-10 · codex 97.9% · $42.60 total</title></circle></g>
+    <!-- claude-pw-cli (indigo), 06-13 a (ties claude) + 06-13 b -->
+    <polyline points="1106,178.4 1316,274.4" stroke="#4f46e5"></polyline>
+    <g fill="#4f46e5"><circle cx="1106" cy="178.4" r="4.1"><title>06-13 a · claude-pw-cli 93.4% · $17.31 total (ties claude)</title></circle><circle cx="1316" cy="274.4" r="2.4"><title>06-13 b · claude-pw-cli 89.4% · $9.99* total (conc. 2, solve $0)</title></circle></g>
     <!-- transparent hover targets (on top) carrying per-point detail -->
-    <line id="guide" x1="0" x2="0" y1="16" y2="312" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" style="display:none"></line><g class="hits"><rect class="hitcol" data-col="0" x="30" y="20" width="131" height="288"></rect><rect class="hitcol" data-col="1" x="161" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="2" x="371" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="3" x="581" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="4" x="791" y="20" width="129" height="288"></rect></g>
+    <line id="guide" x1="0" x2="0" y1="16" y2="312" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" style="display:none"></line><g class="hits"><rect class="hitcol" data-col="0" x="30" y="20" width="131" height="288"></rect><rect class="hitcol" data-col="1" x="161" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="2" x="371" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="3" x="581" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="4" x="791" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="5" x="1001" y="20" width="210" height="288"></rect><rect class="hitcol" data-col="6" x="1211" y="20" width="129" height="288"></rect></g>
   </svg>
   </div>
   <div class="trend-legend">
     <span class="lg"><span class="ln" style="background:#0d9488"></span>claude · skills + hosted MCP</span>
     <span class="lg"><span class="ln" style="background:#2563eb"></span>claude-local-mcp · skills + local MCP</span>
     <span class="lg"><span class="ln" style="background:#db2777"></span>claude-no-skills · baseline</span>
+    <span class="lg"><span class="ln" style="background:#4f46e5"></span>claude-pw-cli · Playwright CLI (06-13 a/b)</span>
     <span class="lg"><span class="ln" style="background:#d97706"></span>codex · gpt-5.5 (06-10 only)</span>
   </div>
-  <p class="trend-note"><b>Read with care:</b> a shaded column <span class="sw"></span> is <b>Codex-graded</b> (06-11 b, 06-12); the others are <b>Claude self-graded</b>. The grader and — on 06-12 — the solver reasoning effort (medium) both change between runs, so the absolute level is <i>not</i> comparable across the grading regimes. The y-axis is zoomed to 88–100% to make the spread visible; every cell is well above the 60% pass floor. <b>Dot size ∝ total run cost</b> (solve+verify) — hover any point for its exact score, cost and grading regime. <b>n = 1 per cell</b> — treat ±1–2 points as noise.</p>
+  <p class="trend-note"><b>Read with care:</b> a shaded column <span class="sw"></span> is <b>Codex-graded</b> (06-11 b, 06-12); the others are <b>Claude self-graded</b>. The grader and — on 06-12 — the solver reasoning effort (medium) both change between runs, so the absolute level is <i>not</i> comparable across the grading regimes. The y-axis is zoomed to 88–100% to make the spread visible; every cell is well above the 60% pass floor. <b>Dot size ∝ total run cost</b> (solve+verify) — hover any point for its exact score, cost and grading regime. <b>n = 1 per cell</b> — treat ±1–2 points as noise. <i>The two 2026-06-13 runs swap the local-MCP arm for a <span style="color:#4f46e5;font-weight:700">Playwright-CLI</span> arm (transport/vanilla experiments), so local-MCP has no 06-13 point. <b>06-13 a</b> (concurrency 3): pw-cli ties <span style="color:#0d9488;font-weight:700">claude</span> exactly (93.4%, indigo dot inside teal). <b>06-13 b</b> (concurrency 2): claude edges pw-cli — and its dots are smaller because two solve rows were killed mid-hang and recorded $0, understating that run's cost.</i></p>
 </div>
 </section>
 <section>
 <div class="reportgrid">
+<div class="report">
+  <div class="rmeta">
+    <div class="rdate">2026-06-13 · 12:03<span class="rdur"> · run 2 · concurrency 2</span></div>
+    <div class="rtitle">Skills win all three — but the SDK hang ran wild</div>
+    <div class="rlede">A repeat of the morning's three rows (<b class="c-claude">claude</b> skills+MCP, <b class="c-cli">claude-pw-cli</b> skills+CLI, <b class="c-noskills">vanilla</b>) at <b>max-concurrency 2</b>. The <b class="c-claude">skills edge held and grew</b> — claude tops vanilla on all three problems (<span class="fig">+5</span> pooled: 94.2% vs 89.3%). The run-1 <b>transport tie didn't quite reproduce</b>: claude edged pw-cli <span class="fig">97–94</span> (tied md_ui_spec, +1/+2 elsewhere — n=1 wobble). Operationally the headline is the <b>agent-SDK teardown hang</b>: halving concurrency made it far worse — <span class="fig">4</span> rows killed by hand (vs 1 in run 1), plus all three basic_form solves flagged. Two killed solves recorded <span class="fig">$0</span> (costs distorted); every verdict survived (recovered from disk where needed). The <span class="fig">480px</span> bug recurs on all three.</div>
+    <div class="rlinks"><a class="btn" href="bench-results-2026-06-13-run2-concurrency2.html">Open report →</a></div>
+  </div>
+  <div class="rdata">
+    <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-claude"></span><b>claude</b> · skills · Playwright MCP</span><span class="sbar"><i class="bg-claude" style="width:93.0%"><span class="star">★</span><span class="sc">93.0%</span><span class="co">$20.00*</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-cli"></span><b>claude-pw-cli</b> · skills · Playwright CLI</span><span class="sbar"><i class="bg-cli" style="width:89.4%"><span class="sc">89.4%</span><span class="co">$9.99*</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-noskills"></span><b>claude-no-skills</b> · vanilla</span><span class="sbar"><i class="bg-noskills" style="width:88.1%"><span class="sc">88.1%</span><span class="co">$14.02</span></i></span></div>
+    </div>
+    <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (*understated — 2 solves $0)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: medium</span><span class="gtag sub">Subscription</span></div>
+  </div>
+</div>
+<div class="report">
+  <div class="rmeta">
+    <div class="rdate">2026-06-13 · 06:48<span class="rdur"> · run 1 · ~1h 45min</span></div>
+    <div class="rtitle">Transport ties — skills earn ~4 idiom points</div>
+    <div class="rlede">Three Claude rows folding <b>two clean A/Bs</b> into one sweep: browser transport (<b class="c-claude">Playwright MCP</b> vs <b class="c-cli">Playwright CLI</b>, all else equal) and Vaadin help (skills + docs MCP vs <b class="c-noskills">vanilla</b>, same MCP browser). The transport A/B is an <b>exact tie</b> on every problem (<span class="fig">20/24 · 30/31 · 48/48</span>). The skills add <span class="fig">~4 pooled pts</span> (95.1% vs 91.3%) — all on Vaadin <em>idiom</em>: vanilla used a CSS-grid <code>Div</code> over <code>FormLayout</code> on <code>basic_form</code> and shipped a silently-broken delete flow + mixed Aura/Lumo theming on <code>md_ui_spec</code>. The CLI row matched claude at <span class="fig">~26%</span> lower cost ($17.31 vs $23.29). The <span class="fig">480px</span> breakpoint bug recurs on all three. <span class="mini">(basic_form's two phase-2 verdicts recovered from disk after the agent-SDK teardown hang.)</span></div>
+    <div class="rlinks"><a class="btn" href="bench-results-2026-06-13-mcp-vs-cli-vs-vanilla.html">Open report →</a></div>
+  </div>
+  <div class="rdata">
+    <div class="scores">
+    <div class="srow win"><span class="sname"><span class="dot bg-cli"></span><b>claude-pw-cli</b> · skills · Playwright CLI</span><span class="sbar"><i class="bg-cli" style="width:93.4%"><span class="star">★</span><span class="sc">93.4%</span><span class="co">$17.31</span></i></span></div>
+    <div class="srow win"><span class="sname"><span class="dot bg-claude"></span><b>claude</b> · skills · Playwright MCP</span><span class="sbar"><i class="bg-claude" style="width:93.4%"><span class="sc">93.4%</span><span class="co">$23.29</span></i></span></div>
+    <div class="srow"><span class="sname"><span class="dot bg-noskills"></span><b>claude-no-skills</b> · vanilla</span><span class="sbar"><i class="bg-noskills" style="width:90.2%"><span class="sc">90.2%</span><span class="co">$21.65</span></i></span></div>
+    </div>
+    <div class="scap"><span>bars: mean rubric % · embedded $ = total cost (solve+verify)</span><span class="gtag claude">Claude-graded</span><span class="gtag eff">effort: medium</span><span class="gtag sub">Subscription</span></div>
+  </div>
+</div>
 <div class="report">
   <div class="rmeta">
     <div class="rdate">2026-06-12 · 10:46<span class="rdur"> · ~1h 30min</span></div>
@@ -313,7 +352,7 @@ result screenshots. Newest first; 5 reports on file.</p>
 <script>(function(){
   var tip=document.getElementById('chartTip'), guide=document.getElementById('guide');
   // one entry per run (x-axis value); rows are best-first, mirroring the card scoreboards
-  var T='#0d9488',B='#2563eb',P='#db2777',A='#d97706';
+  var T='#0d9488',B='#2563eb',P='#db2777',A='#d97706',I='#4f46e5';
   var RUNS=[
     {label:'06-10', cx:56,  note:'Claude self-graded · subscription · effort default', rows:[
       {n:'codex',c:A,s:'97.9%',co:'$42.60',win:1},{n:'claude',c:T,s:'94.4%',co:'$25.17'},{n:'no-skills',c:P,s:'92.3%',co:'$23.02'}]},
@@ -324,7 +363,11 @@ result screenshots. Newest first; 5 reports on file.</p>
     {label:'06-11 c', cx:686, note:'Claude self-graded · subscription · effort default', rows:[
       {n:'no-skills',c:P,s:'93.4%',co:'$24.12',win:1},{n:'claude',c:T,s:'93.1%',co:'$12.36*'},{n:'local-mcp',c:B,s:'92.4%',co:'$25.32'}]},
     {label:'06-12', cx:896, note:'Codex-graded · API key · effort=medium', rows:[
-      {n:'no-skills',c:P,s:'90.9%',co:'$29.06',win:1},{n:'local-mcp',c:B,s:'90.5%',co:'$24.77*'},{n:'claude',c:T,s:'90.3%',co:'$26.68'}]}
+      {n:'no-skills',c:P,s:'90.9%',co:'$29.06',win:1},{n:'local-mcp',c:B,s:'90.5%',co:'$24.77*'},{n:'claude',c:T,s:'90.3%',co:'$26.68'}]},
+    {label:'06-13 a', cx:1106, note:'Claude self-graded · subscription · effort=medium · transport A/B + vanilla · concurrency 3', rows:[
+      {n:'claude-pw-cli',c:I,s:'93.4%',co:'$17.31',win:1},{n:'claude',c:T,s:'93.4%',co:'$23.29'},{n:'no-skills',c:P,s:'90.2%',co:'$21.65'}]},
+    {label:'06-13 b', cx:1316, note:'Claude self-graded · subscription · effort=medium · concurrency 2 · 4 rows killed (SDK hang); 2 solves $0', rows:[
+      {n:'claude',c:T,s:'93.0%',co:'$20.00*',win:1},{n:'claude-pw-cli',c:I,s:'89.4%',co:'$9.99*'},{n:'no-skills',c:P,s:'88.1%',co:'$14.02'}]}
   ];
   function rowHTML(x){
     return '<div class="ttrow"><span class="ttname"><i class="tdot" style="background:'+x.c+'"></i>'+x.n+'</span>'

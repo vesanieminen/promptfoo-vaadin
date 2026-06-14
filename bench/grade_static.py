@@ -77,15 +77,25 @@ def _trace_metrics(context):
     mcp = [t for t in tool_calls if _name(t).startswith("mcp__")]
     errored = [t for t in tool_calls if (t or {}).get("is_error")]
     archaeology = 0
+    # Browser driven via the playwright-cli command (the Playwright CLI rows) instead
+    # of the Playwright MCP. Counts Bash calls invoking `playwright-cli` (covers bare
+    # `playwright-cli ...` and the `npx [--no-install] playwright-cli` fallback) — the
+    # CLI-path analogue of mcp_calls, so the MCP-vs-CLI A/B is comparable in the table.
+    # It's 0 for the MCP rows (their browser usage lands in mcp_calls); always emitted
+    # so the column exists for every row.
+    playwright_cli = 0
     for t in tool_calls:
         if _name(t) == "Bash":
             cmd = ((t.get("input") or {}).get("command") or "") if isinstance(t.get("input"), dict) else ""
             if any(h in cmd for h in _ARCHAEOLOGY_HINTS):
                 archaeology += 1
+            if "playwright-cli" in cmd:
+                playwright_cli += 1
 
     out = {
         "skill_calls": float(len(skill_calls)),
         "mcp_calls": float(len(mcp)),
+        "playwright_cli_calls": float(playwright_cli),
         "tool_calls": float(len(tool_calls)),
         "tool_errors": float(len(errored)),
         "api_archaeology_calls": float(archaeology),
@@ -138,7 +148,9 @@ def _solver_authored(paths):
 # never be mistaken for 'claude-no-skills' (the id `anthropic:claude-agent-sdk` also
 # contains "claude"), regardless of ordering. Canonical list: the SETUPS labels in
 # bench.js (this Python can't import it — keep the two in sync when adding a solver).
-_WORKSPACES = frozenset(("codex", "claude", "claude-no-skills", "claude-local-mcp"))
+_WORKSPACES = frozenset(
+    ("codex", "claude", "claude-no-skills", "claude-local-mcp", "claude-pw-cli", "codex-pw-cli")
+)
 
 
 def _agent_from_provider(context):

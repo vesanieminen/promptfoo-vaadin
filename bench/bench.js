@@ -25,15 +25,22 @@ const PROBLEMS = ['basic_layout', 'basic_form', 'md_ui_spec'];
 // promptfooconfig.js builds a provider for each entry (dispatching on `agent`), SOLVERS
 // derives from it, and verify.js maps SOLVERS to verifiers — none of which need
 // touching. The skills A/B is `claude` vs `claude-no-skills`; the local-MCP A/B is
-// `claude` vs `claude-local-mcp`; `codex` is the cross-agent comparison.
+// `claude` vs `claude-local-mcp`; the Playwright MCP-vs-CLI A/B is `claude` vs
+// `claude-pw-cli` (and `codex` vs `codex-pw-cli`); `codex` is the cross-agent comparison.
 //   - agent      'claude' | 'codex' — which provider factory builds the row
 //   - skills     load the agent-skills plugin (claude) / seed skills into .agents/skills (codex)
 //   - vaadinMcp  which Vaadin docs MCP to wire: 'remote' (hosted), 'local' (under test), or null (none)
+//   - playwright how the agent drives a browser: 'mcp' (the Playwright MCP server, default) or
+//                'cli' (the `playwright-cli` command + its skill — no Playwright MCP wired). The
+//                Playwright MCP README recommends CLI+SKILLS over MCP for token efficiency; the
+//                `*-pw-cli` rows measure that trade-off (see bench/playwright-cli-plugin/README.md).
 const SETUPS = [
-  { label: 'codex',            agent: 'codex',  skills: true,  vaadinMcp: 'remote' },
-  { label: 'claude',           agent: 'claude', skills: true,  vaadinMcp: 'remote' },
-  { label: 'claude-no-skills', agent: 'claude', skills: false, vaadinMcp: null     },
-  { label: 'claude-local-mcp', agent: 'claude', skills: true,  vaadinMcp: 'local'  },
+  { label: 'codex',            agent: 'codex',  skills: true,  vaadinMcp: 'remote', playwright: 'mcp' },
+  { label: 'claude',           agent: 'claude', skills: true,  vaadinMcp: 'remote', playwright: 'mcp' },
+  { label: 'claude-no-skills', agent: 'claude', skills: false, vaadinMcp: null,     playwright: 'mcp' },
+  { label: 'claude-local-mcp', agent: 'claude', skills: true,  vaadinMcp: 'local',  playwright: 'mcp' },
+  { label: 'claude-pw-cli',    agent: 'claude', skills: true,  vaadinMcp: 'remote', playwright: 'cli' },
+  { label: 'codex-pw-cli',     agent: 'codex',  skills: true,  vaadinMcp: 'remote', playwright: 'cli' },
 ];
 
 // Solver labels (= workspace names), in port order within a problem. Derived from
@@ -43,8 +50,10 @@ const SETUPS = [
 const SOLVERS = SETUPS.map((s) => s.label);
 
 // First port (basic_layout/codex). Each problem reserves SOLVERS.length consecutive
-// ports, so the three problems occupy 8081..8089 and never collide — even if two
-// problems' rows were somehow run concurrently.
+// ports, so the three problems (× SOLVERS.length setups each) occupy a contiguous
+// block starting here and never collide — even if two problems' rows were somehow
+// run concurrently. (Adding setups widens each problem's block; ports are recomputed
+// from SETUPS every seed, so nothing hardcodes the old range.)
 const PORT_BASE = 8081;
 
 function problemIndex(problem) {

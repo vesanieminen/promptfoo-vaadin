@@ -42,9 +42,28 @@ const AGENTIC_DX_DIR = process.env.AGENTIC_DX_DIR
   ? path.resolve(process.env.AGENTIC_DX_DIR)
   : path.resolve(__dirname, '..', '..', 'agentic-dx-improvement');
 const AGENT_SKILLS_PLUGIN = path.join(AGENTIC_DX_DIR, 'agent-skills');
+// The local plugin that bundles the `playwright-cli` skill, for the Playwright CLI
+// rows (`playwright: 'cli'`). It lives in THIS repo (next to the config) rather than
+// the agentic-dx checkout: it's a promptfoo-bench artifact, and committing it keeps
+// the CLI rows reproducible (a pinned skill copy) and independent of AGENTIC_DX_DIR.
+// See bench/playwright-cli-plugin/README.md.
+const PLAYWRIGHT_CLI_PLUGIN = path.join(__dirname, 'playwright-cli-plugin');
+
+// How a setup drives a browser (bench.SETUPS `playwright`): 'mcp' wires the Playwright
+// MCP server below; 'cli' wires NO Playwright MCP and instead loads the playwright-cli
+// skill so the agent drives the browser via the `playwright-cli` command (Bash).
+const usesPlaywrightCli = (key) => key === 'cli';
+
+// Benchmark integrity: `playwright-cli` is globally installed (on PATH), so an MCP row
+// will `which playwright-cli` and drive the browser with the CLI instead of the
+// Playwright MCP it's meant to measure — observed 2026-06-12: the MCP `claude` row made
+// 17 CLI / 0 mcp__playwright calls on 2 of 3 problems, collapsing the A/B. The fix is the
+// disallowed_tools deny below (DENY_PLAYWRIGHT_CLI), applied to the MCP rows only.
+const DENY_PLAYWRIGHT_CLI = ['Bash(playwright-cli:*)', 'Bash(playwright-cli)'];
 
 // Playwright (chromium) as an in-memory (`--isolated`) browser, so the concurrent
-// solver rows don't deadlock on a shared profile lock. Registered per provider.
+// solver rows don't deadlock on a shared profile lock. Registered per provider — but
+// ONLY for `playwright: 'mcp'` rows (the 'cli' rows use the playwright-cli command).
 const playwrightArgs = ['--yes', '@playwright/mcp@latest', '--browser', 'chromium', '--headless', '--isolated'];
 // The Vaadin docs MCP the agent-skills plugin bundles. REMOTE is the hosted server
 // (used by codex + the `claude` row); LOCAL is the server under test in the
@@ -82,8 +101,8 @@ const PROMPT = [
   '- When asked to write UI tests, write browserless UI tests.',
   '- If something can be verified using both a browserless UI test and using Playwright, prefer the browserless UI test.',
   '- Use Playwright to look at the end result in a browser.',
-  '  - It is already installed (chromium) and available as an MCP.',
-  '  - Use browser_snapshot / DOM queries for behavior verification; reserve screenshots for layout/visual rubric items.',
+  '  - Chromium is already installed; use whichever Playwright tooling is available to you.',
+  '  - Prefer accessibility snapshots / DOM queries for behavior verification; reserve screenshots for layout/visual rubric items.',
   '',
   "The app's HTTP port is set in `app/src/main/resources/application.properties`",
   '(`server.port`); use that port (not necessarily 8080) when previewing in a browser.',
@@ -93,12 +112,18 @@ const PROMPT = [
 // conditions differ ONLY in the docs help they get; everything else (pinned model,
 // bypass perms, clean setting_sources, Playwright) is identical, so the rubric/trace
 // delta isolates the docs-help variable:
-//   - skills    → load the agent-skills plugin (layouts, responsive-layouts, …)
-//   - vaadinMcp → wire that Vaadin docs MCP ('remote'/'local'/null; null = the baseline)
+//   - skills     → load the agent-skills plugin (layouts, responsive-layouts, …)
+//   - vaadinMcp  → wire that Vaadin docs MCP ('remote'/'local'/null; null = the baseline)
+//   - playwright → 'mcp' wires the Playwright MCP; 'cli' wires NO Playwright MCP and
+//                  loads the playwright-cli skill plugin so the agent drives the
+//                  browser via the `playwright-cli` command instead.
 // `label` is also the workspace name (wd(label) → workspaces/<problem>/<label>); it
 // comes straight from bench.SETUPS, so seed.js has already seeded a workspace for it.
-function claudeSolver({ label, skills, vaadinMcp }) {
-  const servers = [{ name: 'playwright', command: 'npx', args: playwrightArgs }];
+function claudeSolver({ label, skills, vaadinMcp, playwright }) {
+  const cli = usesPlaywrightCli(playwright);
+  // The Playwright MCP is wired only for the 'mcp' rows; the 'cli' rows get the skill
+  // (below) and drive the browser through Bash(`playwright-cli ...`) — no MCP server.
+  const servers = cli ? [] : [{ name: 'playwright', command: 'npx', args: playwrightArgs }];
   const vaadinMcpUrl = resolveVaadinMcp(vaadinMcp);
   // The Vaadin docs MCP must be wired EXPLICITLY: the claude-agent-sdk provider loads
   // the plugin's SKILLS (via plugins:) but NOT its bundled .mcp.json, so without this
@@ -115,9 +140,24 @@ function claudeSolver({ label, skills, vaadinMcp }) {
     setting_sources: [], // ignore the user's personal settings/plugins → clean benchmark
     mcp: { servers },
   };
-  // The Vaadin agent-skills plugin, as an ABSOLUTE path derived from AGENTIC_DX_DIR so
-  // it resolves from any config location (worktree included).
-  if (skills) config.plugins = [{ type: 'local', path: AGENT_SKILLS_PLUGIN }];
+  // Stop the MCP rows from reaching for the globally-installed `playwright-cli` (which
+  // would bypass the Playwright MCP they're measuring). The provider forwards
+  // config.disallowed_tools → SDK disallowedTools, enforced even under bypassPermissions;
+  // it removes the matching Bash invocations from the model's context, and Claude Code
+  // decomposes compound commands so `cd … && playwright-cli …` is denied too
+  // (probe-verified 2026-06-12). The CLI rows are NOT denied — their browser path IS the
+  // CLI. Note: this matches command strings, so a deliberate `npx playwright-cli` or
+  // `bash -c '…'` would slip through — a theoretical gap the agent hasn't exercised.
+  if (!cli) config.disallowed_tools = DENY_PLAYWRIGHT_CLI;
+  // Plugins, as ABSOLUTE paths so they resolve from any config location (worktree
+  // included): the Vaadin agent-skills plugin (from AGENTIC_DX_DIR) when `skills`, and
+  // the bundled playwright-cli skill plugin when this is a Playwright CLI row. With
+  // setting_sources:[] the agent ignores ~/.claude, so the CLI skill MUST come via a
+  // plugin here — exactly like the agent-skills wiring.
+  const plugins = [];
+  if (skills) plugins.push({ type: 'local', path: AGENT_SKILLS_PLUGIN });
+  if (cli) plugins.push({ type: 'local', path: PLAYWRIGHT_CLI_PLUGIN });
+  if (plugins.length) config.plugins = plugins;
   return { id: 'anthropic:claude-code', label, config }; // = anthropic:claude-agent-sdk
 }
 
@@ -125,8 +165,12 @@ function claudeSolver({ label, skills, vaadinMcp }) {
 // first-class plugin/mcp key, so its config goes via cli_config; its skills are seeded
 // into the workspace's `.agents/skills/` by seed.js (not declared here), so `skills` is
 // informational for codex. The Vaadin docs MCP is resolved the same way as Claude's.
-function codexSolver({ label, vaadinMcp }) {
-  const mcp_servers = { playwright: { command: 'npx', args: playwrightArgs } };
+// `playwright`: 'mcp' wires the Playwright MCP; 'cli' wires none and relies on the
+// playwright-cli skill that seed.js seeds into `.agents/skills/playwright-cli`.
+function codexSolver({ label, vaadinMcp, playwright }) {
+  const mcp_servers = usesPlaywrightCli(playwright)
+    ? {}
+    : { playwright: { command: 'npx', args: playwrightArgs } };
   const vaadinMcpUrl = resolveVaadinMcp(vaadinMcp);
   if (vaadinMcpUrl) mcp_servers.vaadin = { url: vaadinMcpUrl }; // parity with the Claude rows
   return {
