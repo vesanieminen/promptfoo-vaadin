@@ -318,6 +318,23 @@ isolated by `seed.js` up front, statically per provider:
 | `ANTHROPIC_API_KEY` | _(optional override)_ | **API-key auth mode.** Bills against the API key (solver + verifier); precedence over any login. Inject run-scoped via `run.sh`. |
 | `CLAUDE_CODE_OAUTH_TOKEN` | _(optional override)_ | **Subscription auth mode.** For a machine/CI with no Keychain login. Inject run-scoped via `run.sh`. |
 
+## Sharing eval results
+
+Eval results live in the local promptfoo store (`~/.promptfoo`, a single binary
+SQLite DB) and so don't travel with the repo. To share and collaboratively extend
+them through git, [`bench/data/`](data/README.md) holds the evals referenced by the
+reports in `docs/` as per-eval JSON + content-addressed screenshot blobs (tracked
+with Git LFS), which two scripts sync to/from your local store:
+
+```bash
+bench/pf-data-pull.sh          # rebuild ~/.promptfoo from bench/data/, then `promptfoo view`
+bench/pf-data-push.sh          # sync bench/data/ to the evals cited in docs/ reports
+```
+
+`push` is report-scoped by default (the dataset mirrors exactly the eval IDs cited
+in `docs/`); collaborators need Git LFS installed. See [`bench/data/README.md`](data/README.md)
+for the full workflow, options, and rationale.
+
 ## Note
 
 This is separate from the repo-root `promptfooconfig.yaml` (a simple one-shot

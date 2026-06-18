@@ -1,0 +1,75 @@
+{
+  "eval_id": "eval-RJd-2026-06-11T09:00:02",
+  "references": [
+    {
+      "id": "12bdf22f-8589-463b-ac3b-8dda511c023e",
+      "blob_hash": "55922573961040133c0c34908cc843319bbd77a3fc70722e92ed9eb8cec32c73",
+      "eval_id": "eval-RJd-2026-06-11T09:00:02",
+      "test_idx": 0,
+      "prompt_idx": 0,
+      "location": "response.images[0].data",
+      "kind": "image",
+      "created_at": "2026-06-11 09:45:05"
+    },
+    {
+      "id": "dbfec836-121b-4a11-8365-7ff5cb129d4e",
+      "blob_hash": "aa490fb6a8d6fe6965148018afec4f4f96d47985f9d0efc0f31ebc445c8d9da5",
+      "eval_id": "eval-RJd-2026-06-11T09:00:02",
+      "test_idx": 0,
+      "prompt_idx": 0,
+      "location": "response.images[1].data",
+      "kind": "image",
+      "created_at": "2026-06-11 09:45:05"
+    },
+    {
+      "id": "a890af8e-e315-4815-b87a-a5f3b517264d",
+      "blob_hash": "20610ac9aba78fdd49dde33d6c8a2c4fccc76d6588a6d4e96f7ba5b59f73b30f",
+      "eval_id": "eval-RJd-2026-06-11T09:00:02",
+      "test_idx": 0,
+      "prompt_idx": 2,
+      "location": "response.images[0].data",
+      "kind": "image",
+      "created_at": "2026-06-11 09:45:05"
+    },
+    {
+      "id": "75ab5dba-62a1-492c-92e7-a4078fcc08db",
+      "blob_hash": "cb87962d7a0b4c3aabc3fa629bf180421007cf175e3ba38e367d7bf7bd53438b",
+      "eval_id": "eval-RJd-2026-06-11T09:00:02",
+      "test_idx": 0,
+      "prompt_idx": 2,
+      "location": "response.images[1].data",
+      "kind": "image",
+      "created_at": "2026-06-11 09:45:05"
+    }
+  ],
+  "assets": [
+    {
+      "hash": "55922573961040133c0c34908cc843319bbd77a3fc70722e92ed9eb8cec32c73",
+      "size_bytes": 82363,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 09:45:05"
+    },
+    {
+      "hash": "aa490fb6a8d6fe6965148018afec4f4f96d47985f9d0efc0f31ebc445c8d9da5",
+      "size_bytes": 43743,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 09:45:05"
+    },
+    {
+      "hash": "20610ac9aba78fdd49dde33d6c8a2c4fccc76d6588a6d4e96f7ba5b59f73b30f",
+      "size_bytes": 84291,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 09:45:05"
+    },
+    {
+      "hash": "cb87962d7a0b4c3aabc3fa629bf180421007cf175e3ba38e367d7bf7bd53438b",
+      "size_bytes": 42713,
+      "mime_type": "image/png",
+      "provider": "filesystem",
+      "created_at": "2026-06-11 09:45:05"
+    }
+  ]
+}
